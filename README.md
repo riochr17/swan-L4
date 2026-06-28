@@ -34,13 +34,12 @@ npm test
 ## Quick Example
 
 ```swan
-TITLE Simple Chat
-#DEFINE AGENT_STOCK https://agents.example.com/v1/stock
+TITLE Greeting Program
 
-SAY Hello, how can I help you today?
+SAY Welcome to the test environment!
 LISTEN
-ASK AGENT_STOCK Check stock status for: {Context}
-SAY The agent reported: {Context}
+THINK Extract the user's name from this text.
+SAY Nice to meet you, {Context}!
 ```
 
 ## License
