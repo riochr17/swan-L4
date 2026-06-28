@@ -45,6 +45,7 @@ export type TokenType =
   | 'INDENT'
   | 'COLON'
   | 'EOF'
+  | 'VARIABLE'
   ;
 
 export interface TokenMap {
@@ -68,10 +69,11 @@ export interface TokenMap {
   INDENT: { type: 'INDENT'; value: string };
   COLON: { type: 'COLON'; value: ':' };
   EOF: { type: 'EOF'; value: '' };
+  VARIABLE: { type: 'VARIABLE'; value: string };
 }
 
 export type Token = {
-  [K in TokenType]: TokenMap[K] & { span: Span };
+  [K in TokenType]: TokenMap[K] & { span: Span; debug?: boolean };
 }[TokenType];
 
 export interface TokenizeError {
@@ -91,6 +93,21 @@ function matchKeyword(str: string, keyword: string): boolean {
   const nextChar = str[keyword.length];
   if (nextChar && /[a-zA-Z0-9_]/.test(nextChar)) return false;
   return true;
+}
+
+function matchKeywordOrDebug(str: string, keyword: string): { matched: boolean; isDebug: boolean; length: number } {
+  if (matchKeyword(str, keyword)) {
+    return { matched: true, isDebug: false, length: keyword.length };
+  }
+  const bracketed = `[${keyword}]`;
+  if (str.startsWith(bracketed)) {
+    const nextChar = str[bracketed.length];
+    if (nextChar && /[a-zA-Z0-9_]/.test(nextChar)) {
+      return { matched: false, isDebug: false, length: 0 };
+    }
+    return { matched: true, isDebug: true, length: bracketed.length };
+  }
+  return { matched: false, isDebug: false, length: 0 };
 }
 
 function parseStringArg(text: string, lineNum: number, lineStartOffset: number, relativeOffset: number): Token {
@@ -284,81 +301,121 @@ export function tokenize(source: string): TokenizeResult {
 
     let hasTokensOnThisLine = false;
 
-    // 1. CONTINUE LOOP
-    if (matchKeyword(remaining, 'CONTINUE LOOP')) {
+    // Check if the statement starts with a variable assignment: $[a-zA-Z0-9_]+
+    const varMatch = remaining.match(/^\$[a-zA-Z0-9_]+/);
+    if (varMatch) {
+      const varLen = varMatch[0].length;
       tokens.push({
-        type: 'CONTINUE_LOOP',
-        value: 'CONTINUE LOOP',
+        type: 'VARIABLE',
+        value: varMatch[0],
         span: {
           line: lineNum,
           column: relativeOffset + 1,
           start: lineStartOffset + relativeOffset,
-          end: lineStartOffset + relativeOffset + 13
+          end: lineStartOffset + relativeOffset + varLen
+        }
+      } as Token);
+      hasTokensOnThisLine = true;
+      remaining = remaining.slice(varLen);
+      relativeOffset += varLen;
+
+      // Skip whitespace after variable
+      const postVarMatch = remaining.match(/^([ \t]*)/);
+      const postVarLen = postVarMatch ? postVarMatch[0].length : 0;
+      remaining = remaining.slice(postVarLen);
+      relativeOffset += postVarLen;
+    }
+
+    // 1. CONTINUE LOOP
+    const continueLoopMatch = matchKeywordOrDebug(remaining, 'CONTINUE LOOP');
+    const exitLoopMatch = matchKeywordOrDebug(remaining, 'EXIT LOOP');
+    const titleMatch = matchKeywordOrDebug(remaining, 'TITLE');
+    const exitMatch = matchKeywordOrDebug(remaining, 'EXIT');
+
+    if (continueLoopMatch.matched) {
+      tokens.push({
+        type: 'CONTINUE_LOOP',
+        value: 'CONTINUE LOOP',
+        debug: continueLoopMatch.isDebug,
+        span: {
+          line: lineNum,
+          column: relativeOffset + 1,
+          start: lineStartOffset + relativeOffset,
+          end: lineStartOffset + relativeOffset + continueLoopMatch.length
         }
       } as Token);
       hasTokensOnThisLine = true;
     }
     // 2. EXIT LOOP
-    else if (matchKeyword(remaining, 'EXIT LOOP')) {
+    else if (exitLoopMatch.matched) {
       tokens.push({
         type: 'EXIT_LOOP',
         value: 'EXIT LOOP',
+        debug: exitLoopMatch.isDebug,
         span: {
           line: lineNum,
           column: relativeOffset + 1,
           start: lineStartOffset + relativeOffset,
-          end: lineStartOffset + relativeOffset + 9
+          end: lineStartOffset + relativeOffset + exitLoopMatch.length
         }
       } as Token);
       hasTokensOnThisLine = true;
     }
     // 2.2. TITLE
-    else if (matchKeyword(remaining, 'TITLE')) {
+    else if (titleMatch.matched) {
       tokens.push({
         type: 'TITLE',
         value: 'TITLE',
+        debug: titleMatch.isDebug,
         span: {
           line: lineNum,
           column: relativeOffset + 1,
           start: lineStartOffset + relativeOffset,
-          end: lineStartOffset + relativeOffset + 5
+          end: lineStartOffset + relativeOffset + titleMatch.length
         }
       } as Token);
       hasTokensOnThisLine = true;
-      const argText = remaining.slice(5);
+      const argText = remaining.slice(titleMatch.length);
       if (argText.trim().length > 0) {
-        tokens.push(parseStringArg(argText, lineNum, lineStartOffset, relativeOffset + 5));
+        tokens.push(parseStringArg(argText, lineNum, lineStartOffset, relativeOffset + titleMatch.length));
       }
     }
     // 2.5. EXIT
-    else if (matchKeyword(remaining, 'EXIT')) {
+    else if (exitMatch.matched) {
       tokens.push({
         type: 'EXIT',
         value: 'EXIT',
+        debug: exitMatch.isDebug,
         span: {
           line: lineNum,
           column: relativeOffset + 1,
           start: lineStartOffset + relativeOffset,
-          end: lineStartOffset + relativeOffset + 4
+          end: lineStartOffset + relativeOffset + exitMatch.length
         }
       } as Token);
       hasTokensOnThisLine = true;
     }
     // 2.75. ASK
-    else if (matchKeyword(remaining, 'ASK')) {
+    const askMatch = matchKeywordOrDebug(remaining, 'ASK');
+    const sayThinkMatch = matchKeywordOrDebug(remaining, 'SAY THINK');
+    const sayMatch = matchKeywordOrDebug(remaining, 'SAY');
+    const listenMatch = matchKeywordOrDebug(remaining, 'LISTEN');
+
+    if (askMatch.matched) {
       tokens.push({
         type: 'ASK',
         value: 'ASK',
+        debug: askMatch.isDebug,
         span: {
           line: lineNum,
           column: relativeOffset + 1,
           start: lineStartOffset + relativeOffset,
-          end: lineStartOffset + relativeOffset + 3
+          end: lineStartOffset + relativeOffset + askMatch.length
         }
       } as Token);
       hasTokensOnThisLine = true;
-      let rest = remaining.slice(3);
-      let restOffset = relativeOffset + 3;
+      let rest = remaining.slice(askMatch.length);
+      let restOffset = relativeOffset + askMatch.length;
 
       // Match next whitespace
       const wsMatch = rest.match(/^([ \t]+)/);
@@ -391,101 +448,111 @@ export function tokenize(source: string): TokenizeResult {
       }
     }
     // 3. SAY THINK
-    else if (matchKeyword(remaining, 'SAY THINK')) {
+    else if (sayThinkMatch.matched) {
       tokens.push({
         type: 'SAY_THINK',
         value: 'SAY THINK',
+        debug: sayThinkMatch.isDebug,
         span: {
           line: lineNum,
           column: relativeOffset + 1,
           start: lineStartOffset + relativeOffset,
-          end: lineStartOffset + relativeOffset + 9
+          end: lineStartOffset + relativeOffset + sayThinkMatch.length
         }
       } as Token);
       hasTokensOnThisLine = true;
-      const argText = remaining.slice(9);
+      const argText = remaining.slice(sayThinkMatch.length);
       if (argText.trim().length > 0) {
-        tokens.push(parseStringArg(argText, lineNum, lineStartOffset, relativeOffset + 9));
+        tokens.push(parseStringArg(argText, lineNum, lineStartOffset, relativeOffset + sayThinkMatch.length));
       }
     }
     // 4. SAY
-    else if (matchKeyword(remaining, 'SAY')) {
+    else if (sayMatch.matched) {
       tokens.push({
         type: 'SAY',
         value: 'SAY',
+        debug: sayMatch.isDebug,
         span: {
           line: lineNum,
           column: relativeOffset + 1,
           start: lineStartOffset + relativeOffset,
-          end: lineStartOffset + relativeOffset + 3
+          end: lineStartOffset + relativeOffset + sayMatch.length
         }
       } as Token);
       hasTokensOnThisLine = true;
-      const argText = remaining.slice(3);
+      const argText = remaining.slice(sayMatch.length);
       if (argText.trim().length > 0) {
-        tokens.push(parseStringArg(argText, lineNum, lineStartOffset, relativeOffset + 3));
+        tokens.push(parseStringArg(argText, lineNum, lineStartOffset, relativeOffset + sayMatch.length));
       }
     }
     // 5. LISTEN
-    else if (matchKeyword(remaining, 'LISTEN')) {
+    else if (listenMatch.matched) {
       tokens.push({
         type: 'LISTEN',
         value: 'LISTEN',
+        debug: listenMatch.isDebug,
         span: {
           line: lineNum,
           column: relativeOffset + 1,
           start: lineStartOffset + relativeOffset,
-          end: lineStartOffset + relativeOffset + 6
+          end: lineStartOffset + relativeOffset + listenMatch.length
         }
       } as Token);
       hasTokensOnThisLine = true;
     }
     // 6. THINK
-    else if (matchKeyword(remaining, 'THINK')) {
+    const thinkMatch = matchKeywordOrDebug(remaining, 'THINK');
+    const ifMatch = matchKeywordOrDebug(remaining, 'IF');
+    const elseMatch = matchKeywordOrDebug(remaining, 'ELSE');
+    const loopMatch = matchKeywordOrDebug(remaining, 'LOOP');
+
+    if (thinkMatch.matched) {
       tokens.push({
         type: 'THINK',
         value: 'THINK',
+        debug: thinkMatch.isDebug,
         span: {
           line: lineNum,
           column: relativeOffset + 1,
           start: lineStartOffset + relativeOffset,
-          end: lineStartOffset + relativeOffset + 5
+          end: lineStartOffset + relativeOffset + thinkMatch.length
         }
       } as Token);
       hasTokensOnThisLine = true;
-      const argText = remaining.slice(5);
+      const argText = remaining.slice(thinkMatch.length);
       if (argText.trim().length > 0) {
-        tokens.push(parseStringArg(argText, lineNum, lineStartOffset, relativeOffset + 5));
+        tokens.push(parseStringArg(argText, lineNum, lineStartOffset, relativeOffset + thinkMatch.length));
       }
     }
     // 7. IF
-    else if (matchKeyword(remaining, 'IF')) {
+    else if (ifMatch.matched) {
       tokens.push({
         type: 'IF',
         value: 'IF',
+        debug: ifMatch.isDebug,
         span: {
           line: lineNum,
           column: relativeOffset + 1,
           start: lineStartOffset + relativeOffset,
-          end: lineStartOffset + relativeOffset + 2
+          end: lineStartOffset + relativeOffset + ifMatch.length
         }
       } as Token);
       hasTokensOnThisLine = true;
-      const rest = remaining.slice(2);
+      const rest = remaining.slice(ifMatch.length);
       const colonIdx = rest.lastIndexOf(':');
       if (colonIdx !== -1) {
         const argText = rest.slice(0, colonIdx);
         if (argText.trim().length > 0) {
-          tokens.push(parseStringArg(argText, lineNum, lineStartOffset, relativeOffset + 2));
+          tokens.push(parseStringArg(argText, lineNum, lineStartOffset, relativeOffset + ifMatch.length));
         }
         tokens.push({
           type: 'COLON',
           value: ':',
           span: {
             line: lineNum,
-            column: relativeOffset + 2 + colonIdx + 1,
-            start: lineStartOffset + relativeOffset + 2 + colonIdx,
-            end: lineStartOffset + relativeOffset + 2 + colonIdx + 1
+            column: relativeOffset + ifMatch.length + colonIdx + 1,
+            start: lineStartOffset + relativeOffset + ifMatch.length + colonIdx,
+            end: lineStartOffset + relativeOffset + ifMatch.length + colonIdx + 1
           }
         } as Token);
       } else {
@@ -502,11 +569,12 @@ export function tokenize(source: string): TokenizeResult {
       }
     }
     // 8. ELSE
-    else if (matchKeyword(remaining, 'ELSE') || remaining.startsWith('ELSE:')) {
-      const elseLen = 4;
+    else if (elseMatch.matched) {
+      const elseLen = elseMatch.length;
       tokens.push({
         type: 'ELSE',
         value: 'ELSE',
+        debug: elseMatch.isDebug,
         span: {
           line: lineNum,
           column: relativeOffset + 1,
@@ -531,11 +599,12 @@ export function tokenize(source: string): TokenizeResult {
       }
     }
     // 9. LOOP
-    else if (matchKeyword(remaining, 'LOOP') || remaining.startsWith('LOOP:')) {
-      const loopLen = 4;
+    else if (loopMatch.matched) {
+      const loopLen = loopMatch.length;
       tokens.push({
         type: 'LOOP',
         value: 'LOOP',
+        debug: loopMatch.isDebug,
         span: {
           line: lineNum,
           column: relativeOffset + 1,
@@ -560,20 +629,22 @@ export function tokenize(source: string): TokenizeResult {
       }
     }
     // 10. DEFINE
-    else if (matchKeyword(remaining, '#DEFINE')) {
+    const defineMatch = matchKeywordOrDebug(remaining, '#DEFINE');
+    if (defineMatch.matched) {
       tokens.push({
         type: 'DEFINE',
         value: '#DEFINE',
+        debug: defineMatch.isDebug,
         span: {
           line: lineNum,
           column: relativeOffset + 1,
           start: lineStartOffset + relativeOffset,
-          end: lineStartOffset + relativeOffset + 7
+          end: lineStartOffset + relativeOffset + defineMatch.length
         }
       } as Token);
       hasTokensOnThisLine = true;
-      let rest = remaining.slice(7);
-      let restOffset = relativeOffset + 7;
+      let rest = remaining.slice(defineMatch.length);
+      let restOffset = relativeOffset + defineMatch.length;
 
       // Match next whitespace
       const wsMatch = rest.match(/^([ \t]+)/);
@@ -627,24 +698,39 @@ export function tokenize(source: string): TokenizeResult {
       }
     }
     // 11. CALL_ macro call
-    else if (remaining.startsWith('CALL_')) {
-      const idMatch = remaining.match(/^CALL_[a-zA-Z0-9_]*/);
+    else if (remaining.startsWith('CALL_') || remaining.startsWith('[CALL_')) {
+      let isDebug = false;
+      let matchStr = remaining;
+      if (remaining.startsWith('[')) {
+        const closeIdx = remaining.indexOf(']');
+        if (closeIdx !== -1) {
+          const inside = remaining.slice(1, closeIdx);
+          if (inside.startsWith('CALL_')) {
+            isDebug = true;
+            matchStr = inside;
+          }
+        }
+      }
+
+      const idMatch = matchStr.match(/^CALL_[a-zA-Z0-9_]*/);
       if (idMatch) {
         const idLen = idMatch[0].length;
+        const tokenLen = isDebug ? idLen + 2 : idLen;
         tokens.push({
           type: 'IDENTIFIER',
           value: idMatch[0],
+          debug: isDebug,
           span: {
             line: lineNum,
             column: relativeOffset + 1,
             start: lineStartOffset + relativeOffset,
-            end: lineStartOffset + relativeOffset + idLen
+            end: lineStartOffset + relativeOffset + tokenLen
           }
         } as Token);
         hasTokensOnThisLine = true;
-        const argText = remaining.slice(idLen);
+        const argText = remaining.slice(tokenLen);
         if (argText.trim().length > 0) {
-          tokens.push(parseStringArg(argText, lineNum, lineStartOffset, relativeOffset + idLen));
+          tokens.push(parseStringArg(argText, lineNum, lineStartOffset, relativeOffset + tokenLen));
         }
       }
     }

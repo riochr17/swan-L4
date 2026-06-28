@@ -66,6 +66,37 @@ ELSE:
   SAY "No matching IF"
 `;
 
+const debugSource = `\
+[TITLE] My Debugged Program
+[#DEFINE] AGENT_STOCK https://agents.warunglele.id/v1/stock
+[#DEFINE] CALL_BOOKING https://api.warunglele.id/v1/booking
+
+[SAY] "Debugging start"
+[LOOP]:
+  [LISTEN]
+  [THINK] "Thinking about state"
+  [ASK] AGENT_STOCK "status"
+  [IF] "debug":
+    [CALL_BOOKING] "log: {Context}"
+    [CONTINUE LOOP]
+  [ELSE]:
+    [EXIT LOOP]
+[EXIT]
+`;
+
+const variableSource = `\
+TITLE Explicit Context Program
+#DEFINE CALL_BOOKING https://api.warunglele.id/v1/booking
+#DEFINE AGENT_STOCK https://agents.warunglele.id/v1/stock
+
+SAY "Confirm your booking:"
+$confirmation LISTEN
+$extracted_data THINK "Extract menu name from {$confirmation}"
+$stock_status ASK AGENT_STOCK "check {$extracted_data}"
+$booking_id [CALL_BOOKING] "book menu: {$extracted_data} confirmation: {$confirmation}"
+SAY "Booking success: {$booking_id}"
+`;
+
 function testSource(name: string, src: string) {
   console.log(`=== TESTING: ${name} ===`);
   const tokenResult = tokenize(src);
@@ -87,6 +118,10 @@ function main() {
   testSource("Indentation Error SWAN L4 Script", indentationErrorSource);
   console.log("\n");
   testSource("Invalid SWAN L4 Script with Semantic Errors", invalidSource);
+  console.log("\n");
+  testSource("SWAN L4 Script with Debug Mode Syntax", debugSource);
+  console.log("\n");
+  testSource("SWAN L4 Script with Explicit Context / Variables", variableSource);
 
   console.log("\n\n-- RUNNING IN INDONESIAN --");
   setLocale('id');

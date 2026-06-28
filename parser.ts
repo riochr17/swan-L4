@@ -21,6 +21,8 @@ import { t } from './i18n';
 export interface ASTNode {
   type: string;
   span: Span;
+  debug?: boolean;
+  assignVar?: string;
 }
 
 export interface ProgramNode extends ASTNode {
@@ -225,6 +227,7 @@ export function parse(tokens: Token[]): ParseResult {
           titleNode = {
             type: 'Title',
             value: argToken.value,
+            debug: first.debug,
             span: {
               line: line.lineNum,
               column: first.span.column,
@@ -270,6 +273,7 @@ export function parse(tokens: Token[]): ParseResult {
           type: 'Define',
           name: idToken.value,
           url: urlToken.value,
+          debug: first.debug,
           span: {
             line: line.lineNum,
             column: first.span.column,
@@ -379,6 +383,44 @@ export function parse(tokens: Token[]): ParseResult {
   }
 
   function parseStatement(line: ParseLine, level: number): StatementNode | null {
+    const tokens = line.tokens;
+    if (tokens.length === 0) return null;
+    const first = tokens[0];
+    if (!first) return null;
+
+    let hasVariable = false;
+    let varName = '';
+    let startToken = first;
+    let actualTokens = tokens;
+
+    if (first.type === 'VARIABLE') {
+      hasVariable = true;
+      varName = first.value;
+      if (tokens.length < 2) {
+        errors.push({
+          errorKey: 'expected_statement_after_variable',
+          message: t('expected_statement_after_variable'),
+          span: first.span
+        });
+        return null;
+      }
+      startToken = tokens[1]!;
+      actualTokens = tokens.slice(1);
+    }
+
+    const node = parseStatementInner({ ...line, tokens: actualTokens }, level);
+    if (node) {
+      if (startToken.debug) {
+        node.debug = true;
+      }
+      if (hasVariable) {
+        node.assignVar = varName;
+      }
+    }
+    return node;
+  }
+
+  function parseStatementInner(line: ParseLine, level: number): StatementNode | null {
     const tokens = line.tokens;
     if (tokens.length === 0) return null;
     const first = tokens[0];

@@ -165,6 +165,10 @@ export const translations: Record<string, Record<Locale, string>> = {
   exit_no_args: {
     en: 'EXIT does not accept any arguments',
     id: 'EXIT tidak boleah diikusi kalimat apapun'
+  },
+  expected_statement_after_variable: {
+    en: 'Expected statement after variable assignment',
+    id: 'Harusnya ada statement setelah penetapan variabel'
   }
 };
 

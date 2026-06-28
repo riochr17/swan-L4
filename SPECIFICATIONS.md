@@ -3,6 +3,8 @@
 ## Table of Contents
 
 - [1. Syntax & Lexical Rules](#1-syntax--lexical-rules)
+  - [1.1. Debug Mode Syntax](#11-debug-mode-syntax)
+  - [1.2. Explicit Context / Variables](#12-explicit-context--variables)
 - [2. Document Structure & Statement Sequencing](#2-document-structure--statement-sequencing)
 - [3. Indentation Rules](#3-indentation-rules)
 - [4. Statement Specifications](#4-statement-specifications)
@@ -34,6 +36,19 @@
   * Control structures: `IF`, `ELSE`, `LOOP`
   * Loop controllers: `EXIT LOOP`, `CONTINUE LOOP`
 * **String Arguments:** Double-quoted strings (e.g. `"Message"`) or unquoted implicit strings extending to the end of the line are accepted for statements that receive arguments.
+
+### 1.1. Debug Mode Syntax
+
+Any primitive keyword, control structure keyword, loop controller keyword, or macro call can be wrapped with square brackets (e.g., `[SAY]`, `[SAY THINK]`, `[THINK]`, `[LISTEN]`, `[ASK]`, `[IF]`, `[ELSE]`, `[LOOP]`, `[EXIT LOOP]`, `[CONTINUE LOOP]`, `[EXIT]`, `[TITLE]`, `[#DEFINE]`, or custom macro calls like `[CALL_CHECK_STOCK]`). Wrapping the keyword flags the statement node with `debug: true` in the AST. By default, nodes have `debug` set to `undefined` or `false`.
+
+### 1.2. Explicit Context / Variables
+
+A statement can optionally assign its output/result to an explicit context variable using the `$variable_name` syntax prefix:
+* **Syntax:** `$variable_name STATEMENT`
+* **Rule 1:** The variable prefix starts with `$` followed by alphanumeric characters and underscores (e.g., `$confirmation`, `$extracted_data`).
+* **Rule 2:** The statement following the variable prefix is parsed normally.
+* **Rule 3:** The parser adds an `assignVar` property containing the variable's name (e.g., `"$confirmation"`) to the generated statement AST node.
+* **Rule 4:** When referencing/interpolating an explicit variable inside template string arguments, the variable name must be enclosed in braces including the `$` prefix, e.g., `{$confirmation}` or `{$extracted_data}`. This is optional and backwards-compatible with the implicit `{Context}` access.
 
 ## 2. Document Structure & Statement Sequencing
 
@@ -177,18 +192,18 @@ TITLE Warung Lele Ordering Agent
 SAY Welcome to Warung Lele! 🐟
 LOOP:
   SAY What would you like to order? (Or say 'exit' to quit)
-  LISTEN
-  IF CONTAINS "exit":
+  $order LISTEN
+  [IF] CONTAINS "exit":
     SAY Thank you for visiting!
     EXIT
-  THINK Extract food menu name and quantity. Example: 2x Lele Garing.
-  CALL_CHECK_STOCK
-  ASK AGENT_STOCK ask the agent to book ticket for one night
-  IF "Available":
+  $menu_item THINK Extract food menu name and quantity from {$order}. Example: 2x Lele Garing.
+  [CALL_CHECK_STOCK]
+  $availability ASK AGENT_STOCK ask the agent to check stock for {$menu_item}
+  IF CONTAINS "Available":
     SAY "Your item is in stock! Confirm booking? (yes/no)"
-    LISTEN
+    $confirmation LISTEN
     IF CONTAINS "yes":
-      CALL_BOOKING "Order placed: {Context}"
+      [CALL_BOOKING] "Order placed for {$menu_item} with status {$availability} and confirmation {$confirmation}"
       SAY Your order has been placed successfully!
       EXIT LOOP
     ELSE:
