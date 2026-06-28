@@ -24,6 +24,8 @@
   - [7.1. Simple Script (Linear Execution)](#71-simple-script-linear-execution)
   - [7.2. Moderate Script (Conditionals)](#72-moderate-script-conditionals)
   - [7.3. Complex Script (Macros, Loops, and Control Flows)](#73-complex-script-macros-loops-and-control-flows)
+  - [7.4. Crypto Price Checker](#74-crypto-price-checker)
+  - [7.5. Weather Agent](#75-weather-agent)
 
 
 ## 1. Syntax & Lexical Rules
@@ -211,4 +213,28 @@ LOOP:
       CONTINUE LOOP
   ELSE:
     SAY Sorry, that menu item is out of stock. Please try another one.
+```
+
+### 7.4. Crypto Price Checker
+
+```swan
+TITLE Crypto Price Checker
+#DEFINE CALL_CRYPTO_PRICE https://api.coingecko.com/api/v3/simple/price
+
+SAY Welcome to Warung Kripto! Mau cari crypto apa?
+LISTEN
+THINK apa nama cripto currency yg user ingin tanyakan (dalam huruf kecil), misalnya bitcoin, contoh lain: ethereum
+CALL_CRYPTO_PRICE ids={Context}&vs_currencies=usd
+SAY THINK Bagaimana harga terakhirnya?
+```
+
+### 7.5. Weather Agent
+
+```swan
+TITLE Weather Agent
+#DEFINE CALL_WEATHER https://wttr.in
+
+SAY Welcome to weather agent
+CALL_WEATHER
+SAY THINK Bagaimana kondisi cuaca saat ini?
 ```
