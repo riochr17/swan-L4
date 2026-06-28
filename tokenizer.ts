@@ -331,6 +331,15 @@ export function tokenize(source: string): TokenizeResult {
     const exitLoopMatch = matchKeywordOrDebug(remaining, 'EXIT LOOP');
     const titleMatch = matchKeywordOrDebug(remaining, 'TITLE');
     const exitMatch = matchKeywordOrDebug(remaining, 'EXIT');
+    const askMatch = matchKeywordOrDebug(remaining, 'ASK');
+    const sayThinkMatch = matchKeywordOrDebug(remaining, 'SAY THINK');
+    const sayMatch = matchKeywordOrDebug(remaining, 'SAY');
+    const listenMatch = matchKeywordOrDebug(remaining, 'LISTEN');
+    const thinkMatch = matchKeywordOrDebug(remaining, 'THINK');
+    const ifMatch = matchKeywordOrDebug(remaining, 'IF');
+    const elseMatch = matchKeywordOrDebug(remaining, 'ELSE');
+    const loopMatch = matchKeywordOrDebug(remaining, 'LOOP');
+    const defineMatch = matchKeywordOrDebug(remaining, '#DEFINE');
 
     if (continueLoopMatch.matched) {
       tokens.push({
@@ -396,12 +405,7 @@ export function tokenize(source: string): TokenizeResult {
       hasTokensOnThisLine = true;
     }
     // 2.75. ASK
-    const askMatch = matchKeywordOrDebug(remaining, 'ASK');
-    const sayThinkMatch = matchKeywordOrDebug(remaining, 'SAY THINK');
-    const sayMatch = matchKeywordOrDebug(remaining, 'SAY');
-    const listenMatch = matchKeywordOrDebug(remaining, 'LISTEN');
-
-    if (askMatch.matched) {
+    else if (askMatch.matched) {
       tokens.push({
         type: 'ASK',
         value: 'ASK',
@@ -501,12 +505,7 @@ export function tokenize(source: string): TokenizeResult {
       hasTokensOnThisLine = true;
     }
     // 6. THINK
-    const thinkMatch = matchKeywordOrDebug(remaining, 'THINK');
-    const ifMatch = matchKeywordOrDebug(remaining, 'IF');
-    const elseMatch = matchKeywordOrDebug(remaining, 'ELSE');
-    const loopMatch = matchKeywordOrDebug(remaining, 'LOOP');
-
-    if (thinkMatch.matched) {
+    else if (thinkMatch.matched) {
       tokens.push({
         type: 'THINK',
         value: 'THINK',
@@ -629,8 +628,7 @@ export function tokenize(source: string): TokenizeResult {
       }
     }
     // 10. DEFINE
-    const defineMatch = matchKeywordOrDebug(remaining, '#DEFINE');
-    if (defineMatch.matched) {
+    else if (defineMatch.matched) {
       tokens.push({
         type: 'DEFINE',
         value: '#DEFINE',

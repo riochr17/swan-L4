@@ -19,30 +19,28 @@ import { tokenize, parse, setLocale } from './index';
 import * as util from 'util';
 
 const validSource = `\
-TITLE My First Program
-#DEFINE CALL_BOOKING https://api.warunglele.id/v1/booking
-#DEFINE CALL_CHECK_STOCK https://api.warunglele.id/v1/inventory
-#DEFINE AGENT_STOCK https://agents.warunglele.id/v1/stock
+TITLE Feedback Evaluator
 
-SAY Halo kak! Selamat datang di Warung Lele. 🐟   
+SAY Welcome to Warung Lele! 🐟
 LOOP:
+  SAY What would you like to order? (Or say 'exit' to quit)
   LISTEN
-  THINK Ekstrak nama menu dan jumlah porsi dari teks tersebut. Contoh format: 2x Lele Garing
-  CALL_CHECK_STOCK
-  ASK AGENT_STOCK ask the agent to book ticket for one night with notes {Context}
   IF CONTAINS "exit":
-    SAY "Pesanan tersedia kak!  "   
+    SAY Thank you for visiting!
+    EXIT
+  $name_quantity THINK Extract food menu name and quantity. Example: 2x Lele Garing.
+  THINK Pretend you know random stock of {Context} on the storage
+  IF the stock is available:
+    SAY "Your item is in stock! Confirm booking? (yes/no)"
     LISTEN
-    CALL_BOOKING "LOG_ACTION: User memesan: {Context}"
-    SAY "Pesanan kakak berhasil dibooking!"
+    IF CONTAINS "yes":
+      SAY Your order has been placed successfully!
+      EXIT LOOP
+    ELSE:
+      SAY Order canceled. Let's start over.
+      CONTINUE LOOP
   ELSE:
-    SAY "Aduh maaf kak, stok menu tersebut lagi kosong."
-    
-  IF > 88:
-    SAY Nice things
-
-SAY THINK tell users to stop
-EXIT
+    SAY Sorry, that menu item is out of stock. Please try another one.
 `;
 
 const indentationErrorSource = `\
