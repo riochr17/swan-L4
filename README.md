@@ -10,6 +10,12 @@ SWAN L4 is a domain-specific language (DSL) parser, tokenizer, and semantic vali
 - **Implicit Context Pipeline**: Seamlessly tracks state through the global `Context` variable and processes `{Context}` template interpolation inside string arguments.
 - **Localized Error Diagnostics**: Supports multi-language translation (English and Indonesian) for syntax and semantic parser errors.
 
+## Installation
+
+```bash
+npm install @ssww.one/l4
+```
+
 ## Usage
 
 ```ts
@@ -67,7 +73,7 @@ Expected output:
 }
 ```
 
-## Installation
+## Development
 
 Ensure you have Node.js and npm installed.
 
