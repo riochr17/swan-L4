@@ -1,8 +1,15 @@
 {
-  "name": "swan-l4",
-  "version": "1.0.0",
+  "name": "@ssww.one/l4",
+  "version": "0.0.1",
   "description": "",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "package.json"
+  ],
   "scripts": {
     "build": "rm -rf dist && tsc",
     "start": "npm run build && node dist",

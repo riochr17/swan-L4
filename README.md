@@ -10,6 +10,63 @@ SWAN L4 is a domain-specific language (DSL) parser, tokenizer, and semantic vali
 - **Implicit Context Pipeline**: Seamlessly tracks state through the global `Context` variable and processes `{Context}` template interpolation inside string arguments.
 - **Localized Error Diagnostics**: Supports multi-language translation (English and Indonesian) for syntax and semantic parser errors.
 
+## Usage
+
+```ts
+import { parse, tokenize } from "@ssww.one/l4";
+
+const source = `\
+TITLE Greeting Program
+
+SAY Welcome to the test environment!
+LISTEN
+THINK Extract the user's name from this text.
+SAY Nice to meet you, {Context}!`;
+
+const tokens = tokenize(source);
+if (tokens.errors.length > 0) {
+  console.error(tokens.errors);
+} else {
+  const parse_result = parse(tokens.tokens);
+  if (parse_result.errors.length > 0) {
+    console.error(parse_result.errors);
+  } else {
+    console.log(JSON.stringify(parse_result.ast, null, 2));
+  }
+}
+```
+
+Expected output:
+```json
+{
+  "type": "Program",
+  "title": {
+    "type": "Title",
+    "value": "Greeting Program",
+    "span": {
+      "line": 1,
+      "column": 1,
+      "start": 0,
+      "end": 22
+    }
+  },
+  "defines": [],
+  "body": [
+    {
+      "type": "Say",
+      "argument": "Welcome to the test environment!",
+      "span": {
+        "line": 3,
+        "column": 1,
+        "start": 24,
+        "end": 60
+      }
+    },
+    // more lines...
+  ]
+}
+```
+
 ## Installation
 
 Ensure you have Node.js and npm installed.
