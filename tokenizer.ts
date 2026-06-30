@@ -192,14 +192,18 @@ export function tokenize(source: string): TokenizeResult {
 
   if (spaceCounts.length > 0) {
     const candidates = [4, 3, 2, 1];
-    const threshold = spaceCounts.length * 0.5;
+    let maxScore = -1;
+    let bestCandidate = 2; // Default fallback
     for (const c of candidates) {
       const score = spaceCounts.filter(n => n % c === 0).length;
-      if (score > threshold) {
-        indentUnit = c;
-        break;
+      if (score > maxScore) {
+        maxScore = score;
+        bestCandidate = c;
+      } else if (score === maxScore && c > bestCandidate) {
+        bestCandidate = c;
       }
     }
+    indentUnit = bestCandidate;
   }
 
   let currentOffset = 0;

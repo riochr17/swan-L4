@@ -234,7 +234,7 @@ TITLE Crypto Price Checker
 SAY Welcome to Warung Kripto! Mau cari crypto apa?
 LISTEN
 THINK apa nama cripto currency yg user ingin tanyakan (dalam huruf kecil), misalnya bitcoin, contoh lain: ethereum
-CALL_CRYPTO_PRICE ids={Context}&vs_currencies=usd
+CALL_CRYPTO_PRICE ?ids={Context}&vs_currencies=usd
 SAY THINK Bagaimana harga terakhirnya?
 ```
 

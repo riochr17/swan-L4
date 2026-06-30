@@ -150,6 +150,23 @@ TITLE Invalid Define Directives Program
 #DEFINE AGENT_HELPER not_a_valid_path!@#
 `;
 
+const feedbackSource = `\
+TITLE Service Feedback Collector
+
+LOOP:
+  SAY Please rate our service from 1 to 5:
+  $rating LISTEN
+  IF is between 1 and 5:
+    SAY Thank you! Please tell us why you gave this rating:
+    LISTEN
+    WRITE ./feedback.txt Rating: {$rating}. Comment: {Context}
+    SAY Feedback logged successfully.
+    EXIT
+  ELSE:
+    SAY Invalid input. Please enter a number between 1 and 5.
+    CONTINUE LOOP
+`;
+
 
 function testSource(name: string, src: string) {
   console.log(`=== TESTING: ${name} ===`);
@@ -184,6 +201,8 @@ function main() {
   testSource("Valid Agent File Path Definitions", agentFilePathSource);
   console.log("\n");
   testSource("Invalid Define Directives", invalidDefineSource);
+  console.log("\n");
+  testSource("Service Feedback Collector Script", feedbackSource);
 
   console.log("\n\n-- RUNNING IN INDONESIAN --");
   setLocale('id');
