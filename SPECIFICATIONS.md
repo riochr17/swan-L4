@@ -14,6 +14,8 @@
   - [4.4. THINK](#44-think)
   - [4.5. CALL_ (Macro Call)](#45-call_-macro-call)
   - [4.6. ASK](#46-ask)
+  - [4.7. READ](#47-read)
+  - [4.8. WRITE](#48-write)
 - [5. Control Flow & Loops](#5-control-flow--loops)
   - [5.1. IF and ELSE](#51-if-and-else)
   - [5.2. LOOP](#52-loop)
@@ -34,10 +36,10 @@
 * **Encoding:** UTF-8
 * **Comments:** Single-line comments start with `//` and are ignored by the tokenizer.
 * **Case Sensitivity:** Structural primitives, headers, and loop controls are case-sensitive and must be capitalized:
-  * Primitives: `TITLE`, `#DEFINE`, `SAY`, `SAY THINK`, `LISTEN`, `THINK`, `EXIT`
+  * Primitives: `TITLE`, `#DEFINE`, `SAY`, `SAY THINK`, `LISTEN`, `THINK`, `READ`, `WRITE`, `EXIT`
   * Control structures: `IF`, `ELSE`, `LOOP`
   * Loop controllers: `EXIT LOOP`, `CONTINUE LOOP`
-* **String Arguments:** Double-quoted strings (e.g. `"Message"`) or unquoted implicit strings extending to the end of the line are accepted for statements that receive arguments.
+* **String Arguments:** Double-quoted strings (e.g. `"Message"`), unquoted implicit strings extending to the end of the line, or multiline block strings wrapped in triple backticks (e.g. ```` ```Multiline\nText\n``` ````) are accepted for statements that receive arguments.
 
 ### 1.1. Debug Mode Syntax
 
@@ -114,6 +116,14 @@ SWAN L4 represents scopes using indentation:
 * **Rule 1:** The identifier must match a macro name defined in the `#DEFINE` section.
 * **Rule 2:** The identifier must start with `AGENT_`.
 * **Rule 3:** If an argument is provided, it must resolve to a valid string argument.
+
+### 4.7. `READ`
+* **Syntax:** `READ <string_argument>`
+* **Behavior:** Reads file contents from the specified path. E.g. `READ ./myfile.txt`
+
+### 4.8. `WRITE`
+* **Syntax:** `WRITE <string_argument_file_path> <string_argument_data>`
+* **Behavior:** Writes the text data to the specified file path. E.g. `WRITE ./myfile.txt some loads of text data`
 
 ## 5. Control Flow & Loops
 
