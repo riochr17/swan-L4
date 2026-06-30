@@ -133,6 +133,23 @@ WRITE ./mydata \`\`\`
 This is an unclosed block string
 `;
 
+const agentFilePathSource = `\
+TITLE Agent File Path Definitions
+#DEFINE AGENT_STOCK ./test.l4
+#DEFINE AGENT_REORDER another-agent.l4
+#DEFINE AGENT_REPORT /absolute/path/to/report.l4
+#DEFINE CALL_BOOKING https://api.warunglele.id/v1/booking
+
+SAY "Done"
+`;
+
+const invalidDefineSource = `\
+TITLE Invalid Define Directives Program
+#DEFINE CALL_WEBSERVICE ./test.l4
+#DEFINE AGENT_STOCK https://agents.warunglele.id/v1/stock/invalid space
+#DEFINE AGENT_HELPER not_a_valid_path!@#
+`;
+
 
 function testSource(name: string, src: string) {
   console.log(`=== TESTING: ${name} ===`);
@@ -163,6 +180,10 @@ function main() {
   testSource("SWAN L4 Script with READ and WRITE features", readWriteSource);
   console.log("\n");
   testSource("Invalid READ and WRITE features", invalidReadWriteSource);
+  console.log("\n");
+  testSource("Valid Agent File Path Definitions", agentFilePathSource);
+  console.log("\n");
+  testSource("Invalid Define Directives", invalidDefineSource);
 
   console.log("\n\n-- RUNNING IN INDONESIAN --");
   setLocale('id');
@@ -171,6 +192,8 @@ function main() {
   testSource("Invalid SWAN L4 Script with Semantic Errors (Indonesian)", invalidSource);
   console.log("\n");
   testSource("Invalid READ and WRITE features (Indonesian)", invalidReadWriteSource);
+  console.log("\n");
+  testSource("Invalid Define Directives (Indonesian)", invalidDefineSource);
 }
 
 main();

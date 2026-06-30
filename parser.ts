@@ -275,26 +275,39 @@ export function parse(tokens: Token[]): ParseResult {
           message: t('invalid_macro_prefix', { identifier: idToken.value }),
           span: idToken.span
         });
-      } else if (!urlToken || urlToken.type !== 'URL') {
-        errors.push({
-          errorKey: 'expected_define_url',
-          message: t('expected_define_url'),
-          span: idToken.span
-        });
       } else {
-        defines.push({
-          type: 'Define',
-          name: idToken.value,
-          url: urlToken.value,
-          debug: first.debug,
-          span: {
-            line: line.lineNum,
-            column: first.span.column,
-            start: first.span.start,
-            end: urlToken.span.end
+        const isAgent = idToken.value.startsWith('AGENT_');
+        if (!urlToken || urlToken.type !== 'URL') {
+          errors.push({
+            errorKey: isAgent ? 'expected_define_url_or_path' : 'expected_define_url',
+            message: t(isAgent ? 'expected_define_url_or_path' : 'expected_define_url'),
+            span: idToken.span
+          });
+        } else {
+          const val = urlToken.value;
+          const valid = isAgent ? (isValidUrl(val) || isValidFilePath(val)) : isValidUrl(val);
+          if (!valid) {
+            errors.push({
+              errorKey: isAgent ? 'expected_define_url_or_path' : 'expected_define_url',
+              message: t(isAgent ? 'expected_define_url_or_path' : 'expected_define_url'),
+              span: urlToken.span
+            });
+          } else {
+            defines.push({
+              type: 'Define',
+              name: idToken.value,
+              url: val,
+              debug: first.debug,
+              span: {
+                line: line.lineNum,
+                column: first.span.column,
+                start: first.span.start,
+                end: urlToken.span.end
+              }
+            });
+            definedMacros.add(idToken.value);
           }
-        });
-        definedMacros.add(idToken.value);
+        }
       }
       index++;
     } else {
@@ -901,4 +914,12 @@ export function parse(tokens: Token[]): ParseResult {
 function sourceLength(tokens: Token[]): number {
   if (tokens.length === 0) return 0;
   return tokens[tokens.length - 1]?.span.end ?? 0;
+}
+
+function isValidUrl(val: string): boolean {
+  return /^(https?:\/\/)[^\s]+$/.test(val);
+}
+
+function isValidFilePath(val: string): boolean {
+  return /^[a-zA-Z0-9_\-\.\/]+$/.test(val);
 }

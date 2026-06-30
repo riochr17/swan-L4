@@ -42,6 +42,10 @@ export const translations: Record<string, Record<Locale, string>> = {
     en: 'Expected URL after macro identifier',
     id: 'Harusnya ada URL setelah pengenal makro'
   },
+  expected_define_url_or_path: {
+    en: 'Expected URL or file path after agent identifier',
+    id: 'Harusnya ada URL atau lokasi file setelah pengenal agent'
+  },
   define_not_at_top: {
     en: '#DEFINE directives must be at the absolute top of the file',
     id: 'Keyword #DEFINE harus berada di bagian paling atas berkas'
