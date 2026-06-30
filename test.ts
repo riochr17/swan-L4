@@ -95,6 +95,44 @@ $booking_id [CALL_BOOKING] "book menu: {$extracted_data} confirmation: {$confirm
 SAY "Booking success: {$booking_id}"
 `;
 
+const readWriteSource = `\
+TITLE \`\`\`
+Read and Write
+Feature Program
+\`\`\`
+
+READ ./anothertext.txt
+$data_file READ ./data.txt
+WRITE ./log.txt this is inline file content
+WRITE ./mydata \`\`\`
+This is a long file
+starts with a data and
+other files
+\`\`\`
+[READ] "./anothertext.txt"
+[WRITE] "./log.txt" "some new debug inline content"
+
+SAY \`\`\`
+Hello from
+a multi-line
+SAY statement!
+\`\`\`
+
+THINK \`\`\`
+Process the text
+using the LLM with
+multi-line prompt
+\`\`\`
+`;
+
+const invalidReadWriteSource = `\
+READ
+WRITE
+WRITE ./path_only.txt
+WRITE ./mydata \`\`\`
+This is an unclosed block string
+`;
+
 
 function testSource(name: string, src: string) {
   console.log(`=== TESTING: ${name} ===`);
@@ -121,12 +159,18 @@ function main() {
   testSource("SWAN L4 Script with Debug Mode Syntax", debugSource);
   console.log("\n");
   testSource("SWAN L4 Script with Explicit Context / Variables", variableSource);
+  console.log("\n");
+  testSource("SWAN L4 Script with READ and WRITE features", readWriteSource);
+  console.log("\n");
+  testSource("Invalid READ and WRITE features", invalidReadWriteSource);
 
   console.log("\n\n-- RUNNING IN INDONESIAN --");
   setLocale('id');
   testSource("Indentation Error SWAN L4 Script (Indonesian)", indentationErrorSource);
   console.log("\n");
   testSource("Invalid SWAN L4 Script with Semantic Errors (Indonesian)", invalidSource);
+  console.log("\n");
+  testSource("Invalid READ and WRITE features (Indonesian)", invalidReadWriteSource);
 }
 
 main();

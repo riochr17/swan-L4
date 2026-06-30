@@ -169,6 +169,22 @@ export const translations: Record<string, Record<Locale, string>> = {
   expected_statement_after_variable: {
     en: 'Expected statement after variable assignment',
     id: 'Harusnya ada statement setelah penetapan variabel'
+  },
+  expected_read_path: {
+    en: 'Expected file path for READ',
+    id: 'Harusnya ada lokasi file untuk READ'
+  },
+  expected_write_path: {
+    en: 'Expected file path for WRITE',
+    id: 'Harusnya ada lokasi file untuk WRITE'
+  },
+  expected_write_content: {
+    en: 'Expected content for WRITE',
+    id: 'Harusnya ada isi file untuk WRITE'
+  },
+  unclosed_block_string: {
+    en: 'Expected closing backticks for block string',
+    id: 'Harusnya ada penutup backtick untuk block string'
   }
 };
 

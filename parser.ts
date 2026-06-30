@@ -56,7 +56,20 @@ export type StatementNode =
   | ExitLoopStatementNode
   | ContinueLoopStatementNode
   | ExitStatementNode
+  | ReadStatementNode
+  | WriteStatementNode
   ;
+
+export interface ReadStatementNode extends ASTNode {
+  type: 'Read';
+  path: string | null;
+}
+
+export interface WriteStatementNode extends ASTNode {
+  type: 'Write';
+  path: string | null;
+  content: string | null;
+}
 
 export interface AskStatementNode extends ASTNode {
   type: 'Ask';
@@ -772,6 +785,83 @@ export function parse(tokens: Token[]): ParseResult {
         return {
           type: 'Loop',
           body,
+          span
+        };
+      }
+
+      case 'READ': {
+        const arg = tokens[1];
+        let val: string | null = null;
+        if (arg) {
+          if (arg.type === 'STRING') {
+            val = arg.value;
+          } else {
+            errors.push({
+              errorKey: 'expected_read_path',
+              message: t('expected_read_path'),
+              span: arg.span
+            });
+          }
+        } else {
+          errors.push({
+            errorKey: 'expected_read_path',
+            message: t('expected_read_path'),
+            span: first.span
+          });
+        }
+        return {
+          type: 'Read',
+          path: val,
+          span
+        };
+      }
+
+      case 'WRITE': {
+        const pathArg = tokens[1];
+        const contentArg = tokens[2];
+        let pathVal: string | null = null;
+        let contentVal: string | null = null;
+
+        if (pathArg) {
+          if (pathArg.type === 'STRING') {
+            pathVal = pathArg.value;
+          } else {
+            errors.push({
+              errorKey: 'expected_write_path',
+              message: t('expected_write_path'),
+              span: pathArg.span
+            });
+          }
+        } else {
+          errors.push({
+            errorKey: 'expected_write_path',
+            message: t('expected_write_path'),
+            span: first.span
+          });
+        }
+
+        if (contentArg) {
+          if (contentArg.type === 'STRING') {
+            contentVal = contentArg.value;
+          } else {
+            errors.push({
+              errorKey: 'expected_write_content',
+              message: t('expected_write_content'),
+              span: contentArg.span
+            });
+          }
+        } else {
+          errors.push({
+            errorKey: 'expected_write_content',
+            message: t('expected_write_content'),
+            span: pathArg ? pathArg.span : first.span
+          });
+        }
+
+        return {
+          type: 'Write',
+          path: pathVal,
+          content: contentVal,
           span
         };
       }

@@ -37,6 +37,8 @@ export type {
   ExitLoopStatementNode,
   ContinueLoopStatementNode,
   ExitStatementNode,
+  ReadStatementNode,
+  WriteStatementNode,
   ParseError,
   ParseResult
 } from './parser';

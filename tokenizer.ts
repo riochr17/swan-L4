@@ -46,6 +46,8 @@ export type TokenType =
   | 'COLON'
   | 'EOF'
   | 'VARIABLE'
+  | 'READ'
+  | 'WRITE'
   ;
 
 export interface TokenMap {
@@ -70,6 +72,8 @@ export interface TokenMap {
   COLON: { type: 'COLON'; value: ':' };
   EOF: { type: 'EOF'; value: '' };
   VARIABLE: { type: 'VARIABLE'; value: string };
+  READ: { type: 'READ'; value: 'READ' };
+  WRITE: { type: 'WRITE'; value: 'WRITE' };
 }
 
 export type Token = {
@@ -229,6 +233,105 @@ export function tokenize(source: string): TokenizeResult {
       continue;
     }
 
+    function parseAndPushStringArg(rest: string, restOffset: number) {
+      // Skip whitespace
+      const wsMatch = rest.match(/^([ \t]+)/);
+      let content = rest;
+      let offset = restOffset;
+      if (wsMatch) {
+        const wsLen = wsMatch[0].length;
+        content = rest.slice(wsLen);
+        offset += wsLen;
+      }
+
+      if (content.startsWith('```')) {
+        let blockLines: string[] = [];
+        let foundEnd = false;
+        const blockStartLine = lineNum;
+        const blockStartCol = offset + 1;
+        const blockStartOffset = lineStartOffset + offset;
+
+        let nextLineIdx = lineIdx + 1;
+        while (nextLineIdx < lines.length) {
+          const nextLine = lines[nextLineIdx] ?? '';
+          if (nextLine.trim() === '```') {
+            foundEnd = true;
+            break;
+          }
+          blockLines.push(nextLine);
+          nextLineIdx++;
+        }
+
+        if (foundEnd) {
+          const blockContent = blockLines.join('\n');
+          let endOffset = blockStartOffset + content.length;
+          let endLine = lineNum;
+          let endCol = offset + content.length + 1;
+
+          let tempOffset = lineStartOffset + lineText.length + (lineIdx < lines.length - 1 ? (source[lineStartOffset + lineText.length] === '\r' ? 2 : 1) : 0);
+          for (let idx = lineIdx + 1; idx <= nextLineIdx; idx++) {
+            const lText = lines[idx] ?? '';
+            if (idx === nextLineIdx) {
+              const trimStartSpace = lText.length - lText.trimStart().length;
+              endLine = idx + 1;
+              endCol = trimStartSpace + 4;
+              endOffset = tempOffset + trimStartSpace + 3;
+            } else {
+              tempOffset += lText.length + (idx < lines.length - 1 ? (source[tempOffset + lText.length] === '\r' ? 2 : 1) : 0);
+            }
+          }
+
+          tokens.push({
+            type: 'STRING',
+            value: blockContent,
+            span: {
+              line: blockStartLine,
+              column: blockStartCol,
+              start: blockStartOffset,
+              end: endOffset
+            }
+          } as Token);
+
+          let accumOffset = lineStartOffset;
+          for (let idx = lineIdx; idx <= nextLineIdx; idx++) {
+            const lText = lines[idx] ?? '';
+            accumOffset += lText.length + (idx < lines.length - 1 ? (source[accumOffset + lText.length] === '\r' ? 2 : 1) : 0);
+          }
+          currentOffset = accumOffset;
+          lineIdx = nextLineIdx;
+        } else {
+          errors.push({
+            errorKey: 'unclosed_block_string',
+            message: t('unclosed_block_string'),
+            span: {
+              line: blockStartLine,
+              column: blockStartCol,
+              start: blockStartOffset,
+              end: source.length
+            }
+          });
+          const blockContent = blockLines.join('\n');
+          tokens.push({
+            type: 'STRING',
+            value: blockContent,
+            span: {
+              line: blockStartLine,
+              column: blockStartCol,
+              start: blockStartOffset,
+              end: source.length
+            }
+          } as Token);
+
+          currentOffset = source.length;
+          lineIdx = lines.length;
+        }
+      } else {
+        if (content.trim().length > 0) {
+          tokens.push(parseStringArg(content, lineNum, lineStartOffset, offset));
+        }
+      }
+    }
+
     // Calculate indentation level and emit INDENT tokens stateless on every line
     const indentMatch = lineText.match(/^([ \t]*)/);
     const indentStr = indentMatch ? indentMatch[0] : '';
@@ -340,6 +443,8 @@ export function tokenize(source: string): TokenizeResult {
     const elseMatch = matchKeywordOrDebug(remaining, 'ELSE');
     const loopMatch = matchKeywordOrDebug(remaining, 'LOOP');
     const defineMatch = matchKeywordOrDebug(remaining, '#DEFINE');
+    const readMatch = matchKeywordOrDebug(remaining, 'READ');
+    const writeMatch = matchKeywordOrDebug(remaining, 'WRITE');
 
     if (continueLoopMatch.matched) {
       tokens.push({
@@ -385,9 +490,7 @@ export function tokenize(source: string): TokenizeResult {
       } as Token);
       hasTokensOnThisLine = true;
       const argText = remaining.slice(titleMatch.length);
-      if (argText.trim().length > 0) {
-        tokens.push(parseStringArg(argText, lineNum, lineStartOffset, relativeOffset + titleMatch.length));
-      }
+      parseAndPushStringArg(argText, relativeOffset + titleMatch.length);
     }
     // 2.5. EXIT
     else if (exitMatch.matched) {
@@ -446,9 +549,7 @@ export function tokenize(source: string): TokenizeResult {
         rest = rest.slice(idLen);
         restOffset += idLen;
 
-        if (rest.trim().length > 0) {
-          tokens.push(parseStringArg(rest, lineNum, lineStartOffset, restOffset));
-        }
+        parseAndPushStringArg(rest, restOffset);
       }
     }
     // 3. SAY THINK
@@ -466,9 +567,7 @@ export function tokenize(source: string): TokenizeResult {
       } as Token);
       hasTokensOnThisLine = true;
       const argText = remaining.slice(sayThinkMatch.length);
-      if (argText.trim().length > 0) {
-        tokens.push(parseStringArg(argText, lineNum, lineStartOffset, relativeOffset + sayThinkMatch.length));
-      }
+      parseAndPushStringArg(argText, relativeOffset + sayThinkMatch.length);
     }
     // 4. SAY
     else if (sayMatch.matched) {
@@ -485,9 +584,7 @@ export function tokenize(source: string): TokenizeResult {
       } as Token);
       hasTokensOnThisLine = true;
       const argText = remaining.slice(sayMatch.length);
-      if (argText.trim().length > 0) {
-        tokens.push(parseStringArg(argText, lineNum, lineStartOffset, relativeOffset + sayMatch.length));
-      }
+      parseAndPushStringArg(argText, relativeOffset + sayMatch.length);
     }
     // 5. LISTEN
     else if (listenMatch.matched) {
@@ -519,9 +616,7 @@ export function tokenize(source: string): TokenizeResult {
       } as Token);
       hasTokensOnThisLine = true;
       const argText = remaining.slice(thinkMatch.length);
-      if (argText.trim().length > 0) {
-        tokens.push(parseStringArg(argText, lineNum, lineStartOffset, relativeOffset + thinkMatch.length));
-      }
+      parseAndPushStringArg(argText, relativeOffset + thinkMatch.length);
     }
     // 7. IF
     else if (ifMatch.matched) {
@@ -727,9 +822,93 @@ export function tokenize(source: string): TokenizeResult {
         } as Token);
         hasTokensOnThisLine = true;
         const argText = remaining.slice(tokenLen);
-        if (argText.trim().length > 0) {
-          tokens.push(parseStringArg(argText, lineNum, lineStartOffset, relativeOffset + tokenLen));
+        parseAndPushStringArg(argText, relativeOffset + tokenLen);
+      }
+    }
+    // 12. READ
+    else if (readMatch.matched) {
+      tokens.push({
+        type: 'READ',
+        value: 'READ',
+        debug: readMatch.isDebug,
+        span: {
+          line: lineNum,
+          column: relativeOffset + 1,
+          start: lineStartOffset + relativeOffset,
+          end: lineStartOffset + relativeOffset + readMatch.length
         }
+      } as Token);
+      hasTokensOnThisLine = true;
+      const argText = remaining.slice(readMatch.length);
+      parseAndPushStringArg(argText, relativeOffset + readMatch.length);
+    }
+    // 13. WRITE
+    else if (writeMatch.matched) {
+      tokens.push({
+        type: 'WRITE',
+        value: 'WRITE',
+        debug: writeMatch.isDebug,
+        span: {
+          line: lineNum,
+          column: relativeOffset + 1,
+          start: lineStartOffset + relativeOffset,
+          end: lineStartOffset + relativeOffset + writeMatch.length
+        }
+      } as Token);
+      hasTokensOnThisLine = true;
+
+      let rest = remaining.slice(writeMatch.length);
+      let restOffset = relativeOffset + writeMatch.length;
+
+      // Skip whitespace
+      const wsMatch = rest.match(/^([ \t]+)/);
+      if (wsMatch) {
+        const wsLen = wsMatch[0].length;
+        rest = rest.slice(wsLen);
+        restOffset += wsLen;
+      }
+
+      let pathVal = '';
+      let pathLen = 0;
+      let pathStartCol = restOffset + 1;
+      let pathStartOffset = lineStartOffset + restOffset;
+
+      if (rest.startsWith('"')) {
+        const nextQuote = rest.indexOf('"', 1);
+        if (nextQuote !== -1) {
+          pathVal = rest.slice(1, nextQuote);
+          pathLen = nextQuote + 1;
+        } else {
+          pathVal = rest.slice(1);
+          pathLen = rest.length;
+        }
+      } else {
+        const firstWs = rest.search(/[ \t]/);
+        if (firstWs !== -1) {
+          pathVal = rest.slice(0, firstWs);
+          pathLen = firstWs;
+        } else {
+          pathVal = rest;
+          pathLen = rest.length;
+        }
+      }
+
+      if (pathLen > 0) {
+        tokens.push({
+          type: 'STRING',
+          value: pathVal,
+          span: {
+            line: lineNum,
+            column: pathStartCol,
+            start: pathStartOffset,
+            end: pathStartOffset + pathLen
+          }
+        } as Token);
+
+        rest = rest.slice(pathLen);
+        restOffset += pathLen;
+
+        parseAndPushStringArg(rest, restOffset);
       }
     }
     // Unknown statement
