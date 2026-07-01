@@ -59,7 +59,13 @@ export type StatementNode =
   | ReadStatementNode
   | WriteStatementNode
   | FindStatementNode
+  | ParalelStatementNode
   ;
+
+export interface ParalelStatementNode extends ASTNode {
+  type: 'Paralel';
+  body: StatementNode[];
+}
 
 export interface FindContext {
   type: 'raw' | 'explicit' | 'implicit';
@@ -809,8 +815,32 @@ export function parse(tokens: Token[]): ParseResult {
           });
         }
 
+      }
+
+      case 'PARALEL': {
+        const lastToken = tokens[tokens.length - 1];
+        if (!lastToken || lastToken.type !== 'COLON') {
+          errors.push({
+            errorKey: 'expected_paralel_colon',
+            message: t('expected_paralel_colon'),
+            span: lastToken?.span ?? first.span
+          });
+        }
+
+        index++;
+        const body = parseBlock(level + 1);
+        index--;
+
+        if (body.length === 0) {
+          errors.push({
+            errorKey: 'empty_paralel_block',
+            message: t('empty_paralel_block'),
+            span: first.span
+          });
+        }
+
         return {
-          type: 'Loop',
+          type: 'Paralel',
           body,
           span
         };

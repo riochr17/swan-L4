@@ -49,6 +49,7 @@ export type TokenType =
   | 'READ'
   | 'WRITE'
   | 'FIND'
+  | 'PARALEL'
   ;
 
 export interface TokenMap {
@@ -76,6 +77,7 @@ export interface TokenMap {
   READ: { type: 'READ'; value: 'READ' };
   WRITE: { type: 'WRITE'; value: 'WRITE' };
   FIND: { type: 'FIND'; value: 'FIND' };
+  PARALEL: { type: 'PARALEL'; value: 'PARALEL' };
 }
 
 export type Token = {
@@ -452,6 +454,7 @@ export function tokenize(source: string): TokenizeResult {
     const readMatch = matchKeywordOrDebug(remaining, 'READ');
     const writeMatch = matchKeywordOrDebug(remaining, 'WRITE');
     const findMatch = matchKeywordOrDebug(remaining, 'FIND');
+    const paralelMatch = matchKeywordOrDebug(remaining, 'PARALEL');
 
     if (continueLoopMatch.matched) {
       tokens.push({
@@ -1055,6 +1058,36 @@ export function tokenize(source: string): TokenizeResult {
             end: lineStartOffset + restOffset + Math.max(1, rest.length)
           }
         });
+      }
+    }
+    // 15. PARALEL
+    else if (paralelMatch.matched) {
+      const paralelLen = paralelMatch.length;
+      tokens.push({
+        type: 'PARALEL',
+        value: 'PARALEL',
+        debug: paralelMatch.isDebug,
+        span: {
+          line: lineNum,
+          column: relativeOffset + 1,
+          start: lineStartOffset + relativeOffset,
+          end: lineStartOffset + relativeOffset + paralelLen
+        }
+      } as Token);
+      hasTokensOnThisLine = true;
+      const rest = remaining.slice(paralelLen);
+      const colonIdx = rest.indexOf(':');
+      if (colonIdx !== -1) {
+        tokens.push({
+          type: 'COLON',
+          value: ':',
+          span: {
+            line: lineNum,
+            column: relativeOffset + paralelLen + colonIdx + 1,
+            start: lineStartOffset + relativeOffset + paralelLen + colonIdx,
+            end: lineStartOffset + relativeOffset + paralelLen + colonIdx + 1
+          }
+        } as Token);
       }
     }
     // Unknown statement

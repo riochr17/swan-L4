@@ -41,6 +41,7 @@ export type {
   WriteStatementNode,
   FindStatementNode,
   FindContext,
+  ParalelStatementNode,
   ParseError,
   ParseResult
 } from './parser';

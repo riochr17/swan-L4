@@ -142,6 +142,14 @@ export const translations: Record<string, Record<Locale, string>> = {
     en: 'LOOP statement must have at least one statement in its block',
     id: 'Statement LOOP harus memiliki setidaknya satu statement di dalam bloknya'
   },
+  expected_paralel_colon: {
+    en: "Expected ':' at the end of PARALEL statement",
+    id: "Harusnya ada ':' di akhir pernyataan PARALEL"
+  },
+  empty_paralel_block: {
+    en: 'PARALEL statement must have at least one statement in its block',
+    id: 'Statement PARALEL harus memiliki setidaknya satu statement di dalam bloknya'
+  },
   unexpected_start_token: {
     en: "Unexpected token '{token}' at start of statement",
     id: "Token tidak terduga '{token}' di awal pernyataan"

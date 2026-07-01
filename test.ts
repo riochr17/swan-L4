@@ -189,6 +189,23 @@ FIND new food on 2026
 FIND
 `;
 
+const paralelSource = `\
+TITLE Parallel Execution Example
+#DEFINE CALL_SEARCH_GOOGLE https://google.com/search
+#DEFINE CALL_SEARCH_BING https://bing.com/search
+
+PARALEL:
+  CALL_SEARCH_GOOGLE ?q=new city in asia
+  READ ./city-logs.txt
+  CALL_SEARCH_BING ?keywords=city,data,asia
+`;
+
+const invalidParalelSource = `\
+TITLE Invalid Parallel Block
+PARALEL
+  SAY Not indented properly
+`;
+
 
 function testSource(name: string, src: string) {
   console.log(`=== TESTING: ${name} ===`);
@@ -229,6 +246,10 @@ function main() {
   testSource("Valid FIND Statements", findSource);
   console.log("\n");
   testSource("Invalid FIND Statements", invalidFindSource);
+  console.log("\n");
+  testSource("Valid PARALEL Statements", paralelSource);
+  console.log("\n");
+  testSource("Invalid PARALEL Statements", invalidParalelSource);
 
   console.log("\n\n-- RUNNING IN INDONESIAN --");
   setLocale('id');
@@ -241,6 +262,8 @@ function main() {
   testSource("Invalid Define Directives (Indonesian)", invalidDefineSource);
   console.log("\n");
   testSource("Invalid FIND Statements (Indonesian)", invalidFindSource);
+  console.log("\n");
+  testSource("Invalid PARALEL Statements (Indonesian)", invalidParalelSource);
 }
 
 main();
