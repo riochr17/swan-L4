@@ -39,6 +39,8 @@ export type {
   ExitStatementNode,
   ReadStatementNode,
   WriteStatementNode,
+  FindStatementNode,
+  FindContext,
   ParseError,
   ParseResult
 } from './parser';

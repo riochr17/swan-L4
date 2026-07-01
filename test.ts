@@ -167,6 +167,28 @@ LOOP:
     CONTINUE LOOP
 `;
 
+const findSource = `\
+TITLE Semantic Search with FIND
+$longtext READ longfile.pdf
+SAY finding your data...
+FIND 3/15 new food on 2026 {$longtext}
+FIND 3/15 new food on 2026
+FIND 3/15 new food on 2026 {$somevar} {Context}
+FIND 3/15 new food on 2026 \`\`\`
+this is some long string instead of 
+implicit/explicit context
+I can add another explicit context {$anothervar}
+or even implicit context {Context}
+\`\`\`
+`;
+
+const invalidFindSource = `\
+TITLE Invalid FIND Statements
+FIND 3/
+FIND new food on 2026
+FIND
+`;
+
 
 function testSource(name: string, src: string) {
   console.log(`=== TESTING: ${name} ===`);
@@ -203,6 +225,10 @@ function main() {
   testSource("Invalid Define Directives", invalidDefineSource);
   console.log("\n");
   testSource("Service Feedback Collector Script", feedbackSource);
+  console.log("\n");
+  testSource("Valid FIND Statements", findSource);
+  console.log("\n");
+  testSource("Invalid FIND Statements", invalidFindSource);
 
   console.log("\n\n-- RUNNING IN INDONESIAN --");
   setLocale('id');
@@ -213,6 +239,8 @@ function main() {
   testSource("Invalid READ and WRITE features (Indonesian)", invalidReadWriteSource);
   console.log("\n");
   testSource("Invalid Define Directives (Indonesian)", invalidDefineSource);
+  console.log("\n");
+  testSource("Invalid FIND Statements (Indonesian)", invalidFindSource);
 }
 
 main();

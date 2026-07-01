@@ -58,7 +58,21 @@ export type StatementNode =
   | ExitStatementNode
   | ReadStatementNode
   | WriteStatementNode
+  | FindStatementNode
   ;
+
+export interface FindContext {
+  type: 'raw' | 'explicit' | 'implicit';
+  value: string;
+}
+
+export interface FindStatementNode extends ASTNode {
+  type: 'Find';
+  resultChunks: number;
+  totalChunks: number;
+  query: string | null;
+  sourceContext: FindContext | null;
+}
 
 export interface ReadStatementNode extends ASTNode {
   type: 'Read';
@@ -875,6 +889,85 @@ export function parse(tokens: Token[]): ParseResult {
           type: 'Write',
           path: pathVal,
           content: contentVal,
+          span
+        };
+      }
+
+      case 'FIND': {
+        const ratioArg = tokens[1];
+        const queryArg = tokens[2];
+        const contextArg = tokens[3];
+
+        let resultChunks = 0;
+        let totalChunks = 0;
+        let queryVal: string | null = null;
+        let contextVal: FindContext | null = null;
+
+        if (ratioArg && ratioArg.type === 'STRING') {
+          const ratioVal = ratioArg.value;
+          const ratioParts = ratioVal.split('/');
+          resultChunks = parseInt(ratioParts[0] || '0', 10);
+          totalChunks = parseInt(ratioParts[1] || '0', 10);
+        } else {
+          errors.push({
+            errorKey: 'invalid_find_ratio',
+            message: t('invalid_find_ratio'),
+            span: first.span
+          });
+        }
+
+        if (queryArg) {
+          if (queryArg.type === 'STRING') {
+            queryVal = queryArg.value;
+          } else {
+            errors.push({
+              errorKey: 'expected_find_query',
+              message: t('expected_find_query'),
+              span: queryArg.span
+            });
+          }
+        } else {
+          errors.push({
+            errorKey: 'expected_find_query',
+            message: t('expected_find_query'),
+            span: ratioArg ? ratioArg.span : first.span
+          });
+        }
+
+
+
+        if (contextArg && contextArg.type === 'STRING') {
+          const rawVal = contextArg.value;
+          const varMatch = rawVal.match(/^\{\$([a-zA-Z0-9_]+)\}$/);
+          if (varMatch) {
+            contextVal = {
+              type: 'explicit',
+              value: '$' + varMatch[1]
+            };
+          } else if (rawVal === '{Context}') {
+            contextVal = {
+              type: 'implicit',
+              value: 'Context'
+            };
+          } else {
+            contextVal = {
+              type: 'raw',
+              value: rawVal
+            };
+          }
+        } else {
+          contextVal = {
+            type: 'implicit',
+            value: 'Context'
+          };
+        }
+
+        return {
+          type: 'Find',
+          resultChunks,
+          totalChunks,
+          query: queryVal,
+          sourceContext: contextVal,
           span
         };
       }

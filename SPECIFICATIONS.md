@@ -16,6 +16,7 @@
   - [4.6. ASK](#46-ask)
   - [4.7. READ](#47-read)
   - [4.8. WRITE](#48-write)
+  - [4.9. FIND](#49-find)
 - [5. Control Flow & Loops](#5-control-flow--loops)
   - [5.1. IF and ELSE](#51-if-and-else)
   - [5.2. LOOP](#52-loop)
@@ -36,7 +37,7 @@
 * **Encoding:** UTF-8
 * **Comments:** Single-line comments start with `//` and are ignored by the tokenizer.
 * **Case Sensitivity:** Structural primitives, headers, and loop controls are case-sensitive and must be capitalized:
-  * Primitives: `TITLE`, `#DEFINE`, `SAY`, `SAY THINK`, `LISTEN`, `THINK`, `READ`, `WRITE`, `EXIT`
+  * Primitives: `TITLE`, `#DEFINE`, `SAY`, `SAY THINK`, `LISTEN`, `THINK`, `READ`, `WRITE`, `FIND`, `EXIT`
   * Control structures: `IF`, `ELSE`, `LOOP`
   * Loop controllers: `EXIT LOOP`, `CONTINUE LOOP`
 * **String Arguments:** Double-quoted strings (e.g. `"Message"`), unquoted implicit strings extending to the end of the line, or multiline block strings wrapped in triple backticks (e.g. ```` ```Multiline\nText\n``` ````) are accepted for statements that receive arguments.
@@ -124,6 +125,32 @@ SWAN L4 represents scopes using indentation:
 ### 4.8. `WRITE`
 * **Syntax:** `WRITE <string_argument_file_path> <string_argument_data>`
 * **Behavior:** Writes the text data to the specified file path. E.g. `WRITE ./myfile.txt some loads of text data`
+
+### 4.9. `FIND`
+* **Syntax:** `FIND <result-chunks>/<total-chunks> <semantic keywords> [<source context>]`
+* **Behavior:** Performs semantic search to find a subset of top related chunks out of the total chunks from the source context. The source context can be a multiline block string or a variable containing context data.
+* **Examples:**
+  * Implicit context:
+    ```swan
+    READ longfile.pdf
+    FIND 3/15 new food on 2026
+    ```
+  * Explicit context (variable):
+    ```swan
+    $longtext READ longfile.pdf
+    FIND 3/15 new food on 2026 {$longtext}
+    ```
+  * Multiline block string context (supports variable interpolation inside):
+    ````swan
+    $longtext READ longfile.pdf
+    SAY finding your data...
+    FIND 3/15 new food on 2026 ```
+    this is some long string instead of 
+    implicit/explicit context
+    I can add another explicit context {$anothervar}
+    or even implicit context {Context}
+    ```
+    ````
 
 ## 5. Control Flow & Loops
 

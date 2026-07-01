@@ -189,6 +189,14 @@ export const translations: Record<string, Record<Locale, string>> = {
   unclosed_block_string: {
     en: 'Expected closing backticks for block string',
     id: 'Harusnya ada penutup backtick untuk block string'
+  },
+  expected_find_query: {
+    en: 'Expected semantic search query for FIND',
+    id: 'Harusnya ada query pencarian semantik untuk FIND'
+  },
+  invalid_find_ratio: {
+    en: 'Expected chunk ratio (e.g. 3/15) after FIND',
+    id: 'Harusnya ada rasio chunk (contoh: 3/15) setelah FIND'
   }
 };
 

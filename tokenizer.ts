@@ -48,6 +48,7 @@ export type TokenType =
   | 'VARIABLE'
   | 'READ'
   | 'WRITE'
+  | 'FIND'
   ;
 
 export interface TokenMap {
@@ -74,6 +75,7 @@ export interface TokenMap {
   VARIABLE: { type: 'VARIABLE'; value: string };
   READ: { type: 'READ'; value: 'READ' };
   WRITE: { type: 'WRITE'; value: 'WRITE' };
+  FIND: { type: 'FIND'; value: 'FIND' };
 }
 
 export type Token = {
@@ -449,6 +451,7 @@ export function tokenize(source: string): TokenizeResult {
     const defineMatch = matchKeywordOrDebug(remaining, '#DEFINE');
     const readMatch = matchKeywordOrDebug(remaining, 'READ');
     const writeMatch = matchKeywordOrDebug(remaining, 'WRITE');
+    const findMatch = matchKeywordOrDebug(remaining, 'FIND');
 
     if (continueLoopMatch.matched) {
       tokens.push({
@@ -913,6 +916,145 @@ export function tokenize(source: string): TokenizeResult {
         restOffset += pathLen;
 
         parseAndPushStringArg(rest, restOffset);
+      }
+    }
+    // 14. FIND
+    else if (findMatch.matched) {
+      tokens.push({
+        type: 'FIND',
+        value: 'FIND',
+        debug: findMatch.isDebug,
+        span: {
+          line: lineNum,
+          column: relativeOffset + 1,
+          start: lineStartOffset + relativeOffset,
+          end: lineStartOffset + relativeOffset + findMatch.length
+        }
+      } as Token);
+      hasTokensOnThisLine = true;
+
+      let rest = remaining.slice(findMatch.length);
+      let restOffset = relativeOffset + findMatch.length;
+
+      // Skip whitespace
+      const wsMatch = rest.match(/^([ \t]+)/);
+      if (wsMatch) {
+        const wsLen = wsMatch[0].length;
+        rest = rest.slice(wsLen);
+        restOffset += wsLen;
+      }
+
+      // Now we expect a ratio: e.g. 3/15
+      const ratioMatch = rest.match(/^(\d+\/\d+)/);
+      if (ratioMatch) {
+        const ratioStr = ratioMatch[0];
+        const ratioLen = ratioStr.length;
+        tokens.push({
+          type: 'STRING',
+          value: ratioStr,
+          span: {
+            line: lineNum,
+            column: restOffset + 1,
+            start: lineStartOffset + restOffset,
+            end: lineStartOffset + restOffset + ratioLen
+          }
+        } as Token);
+
+        rest = rest.slice(ratioLen);
+        restOffset += ratioLen;
+
+        // Skip whitespace
+        const wsMatch2 = rest.match(/^([ \t]+)/);
+        let contentOffset = restOffset;
+        let contentStr = rest;
+        if (wsMatch2) {
+          const wsLen2 = wsMatch2[0].length;
+          contentStr = rest.slice(wsLen2);
+          contentOffset += wsLen2;
+        }
+
+        const blockIdx = contentStr.indexOf('```');
+        if (blockIdx !== -1) {
+          const queryVal = contentStr.slice(0, blockIdx).trim();
+          if (queryVal.length > 0) {
+            tokens.push({
+              type: 'STRING',
+              value: queryVal,
+              span: {
+                line: lineNum,
+                column: contentOffset + (contentStr.length - contentStr.trimStart().length) + 1,
+                start: lineStartOffset + contentOffset + (contentStr.length - contentStr.trimStart().length),
+                end: lineStartOffset + contentOffset + (contentStr.length - contentStr.trimStart().length) + queryVal.length
+              }
+            } as Token);
+          }
+          const blockStr = contentStr.slice(blockIdx);
+          const blockOffset = contentOffset + blockIdx;
+          parseAndPushStringArg(blockStr, blockOffset);
+        } else {
+          // Now split contentStr into query and sourceContext
+          // We look for a trailing {$variable} or {Context}
+          const contextMatch = contentStr.match(/\s+(\{\$[a-zA-Z0-9_]+\}|\{Context\})\s*$/);
+          if (contextMatch) {
+            const matchedStr = contextMatch[0];
+            const contextStr = contextMatch[1]!;
+            const queryVal = contentStr.slice(0, contentStr.length - matchedStr.length).trim();
+
+            // Push query
+            if (queryVal.length > 0) {
+              tokens.push({
+                type: 'STRING',
+                value: queryVal,
+                span: {
+                  line: lineNum,
+                  column: contentOffset + 1,
+                  start: lineStartOffset + contentOffset,
+                  end: lineStartOffset + contentOffset + queryVal.length
+                }
+              } as Token);
+            }
+
+            // Push sourceContext
+            const contextStartCol = contentOffset + contentStr.length - matchedStr.length + (matchedStr.length - contextStr.length);
+            tokens.push({
+              type: 'STRING',
+              value: contextStr,
+              span: {
+                line: lineNum,
+                column: contextStartCol + 1,
+                start: lineStartOffset + contextStartCol,
+                end: lineStartOffset + contextStartCol + contextStr.length
+              }
+            } as Token);
+          } else {
+            // No explicit context, push the entire contentStr as query if not empty
+            const queryVal = contentStr.trim();
+            if (queryVal.length > 0) {
+              tokens.push({
+                type: 'STRING',
+                value: queryVal,
+                span: {
+                  line: lineNum,
+                  column: contentOffset + (contentStr.length - contentStr.trimStart().length) + 1,
+                  start: lineStartOffset + contentOffset + (contentStr.length - contentStr.trimStart().length),
+                  end: lineStartOffset + contentOffset + (contentStr.length - contentStr.trimStart().length) + queryVal.length
+                }
+              } as Token);
+            }
+          }
+        }
+      } else {
+        // Missing or invalid ratio! Push a tokenizer error.
+        errors.push({
+          errorKey: 'invalid_find_ratio',
+          message: t('invalid_find_ratio'),
+          span: {
+            line: lineNum,
+            column: restOffset + 1,
+            start: lineStartOffset + restOffset,
+            end: lineStartOffset + restOffset + Math.max(1, rest.length)
+          }
+        });
       }
     }
     // Unknown statement
