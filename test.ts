@@ -111,6 +111,7 @@ other files
 \`\`\`
 [READ] "./anothertext.txt"
 [WRITE] "./log.txt" "some new debug inline content"
+WRITE ./path_only.txt
 
 SAY \`\`\`
 Hello from
@@ -128,7 +129,6 @@ multi-line prompt
 const invalidReadWriteSource = `\
 READ
 WRITE
-WRITE ./path_only.txt
 WRITE ./mydata \`\`\`
 This is an unclosed block string
 `;
@@ -206,6 +206,17 @@ PARALEL
   SAY Not indented properly
 `;
 
+const userResearchSource = `\
+SAY THINK find latest research about AI by utilizing DSL
+WRITE ./list-research.txt {Context}
+LOOP:
+  READ ./list-research.txt
+  $item SAY THINK Extract first item from list
+  THINK Remove first item from the list
+  WRITE ./list-research.txt {Context}
+  SAY THINK Find more about this topic: {$item}
+`;
+
 
 function testSource(name: string, src: string) {
   console.log(`=== TESTING: ${name} ===`);
@@ -223,6 +234,8 @@ function testSource(name: string, src: string) {
 function main() {
   console.log("-- RUNNING IN ENGLISH --");
   setLocale('en');
+  testSource("User Research Script", userResearchSource);
+  console.log("\n");
   testSource("Valid SWAN L4 Script", validSource);
   console.log("\n");
   testSource("Indentation Error SWAN L4 Script", indentationErrorSource);

@@ -815,6 +815,11 @@ export function parse(tokens: Token[]): ParseResult {
           });
         }
 
+        return {
+          type: 'Loop',
+          body,
+          span
+        };
       }
 
       case 'PARALEL': {
@@ -907,12 +912,6 @@ export function parse(tokens: Token[]): ParseResult {
               span: contentArg.span
             });
           }
-        } else {
-          errors.push({
-            errorKey: 'expected_write_content',
-            message: t('expected_write_content'),
-            span: pathArg ? pathArg.span : first.span
-          });
         }
 
         return {
