@@ -124,8 +124,8 @@ SWAN L4 represents scopes using indentation:
 * **Behavior:** Reads file contents from the specified path. E.g. `READ ./myfile.txt`
 
 ### 4.8. `WRITE`
-* **Syntax:** `WRITE <string_argument_file_path> <string_argument_data>`
-* **Behavior:** Writes the text data to the specified file path. E.g. `WRITE ./myfile.txt some loads of text data`
+* **Syntax:** `WRITE <string_argument_file_path> [<string_argument_data>]`
+* **Behavior:** Writes the text data to the specified file path. E.g. `WRITE ./myfile.txt some loads of text data`. The data argument is optional; if omitted, it defaults to null or empty.
 
 ### 4.9. `FIND`
 * **Syntax:** `FIND <result-chunks>/<total-chunks> <semantic keywords> [<source context>]`
