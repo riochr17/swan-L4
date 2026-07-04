@@ -42,6 +42,10 @@ export type {
   FindStatementNode,
   FindContext,
   ParalelStatementNode,
+  IterateStatementNode,
+  ExitIterationStatementNode,
+  ContinueIterationStatementNode,
+  ClearContextStatementNode,
   ParseError,
   ParseResult
 } from './parser';

@@ -50,6 +50,10 @@ export type TokenType =
   | 'WRITE'
   | 'FIND'
   | 'PARALEL'
+  | 'ITERATE'
+  | 'EXIT_ITERATION'
+  | 'CONTINUE_ITERATION'
+  | 'CLEAR_CONTEXT'
   ;
 
 export interface TokenMap {
@@ -78,6 +82,10 @@ export interface TokenMap {
   WRITE: { type: 'WRITE'; value: 'WRITE' };
   FIND: { type: 'FIND'; value: 'FIND' };
   PARALEL: { type: 'PARALEL'; value: 'PARALEL' };
+  ITERATE: { type: 'ITERATE'; value: 'ITERATE' };
+  EXIT_ITERATION: { type: 'EXIT_ITERATION'; value: 'EXIT ITERATION' };
+  CONTINUE_ITERATION: { type: 'CONTINUE_ITERATION'; value: 'CONTINUE ITERATION' };
+  CLEAR_CONTEXT: { type: 'CLEAR_CONTEXT'; value: 'CLEAR CONTEXT' };
 }
 
 export type Token = {
@@ -455,8 +463,97 @@ export function tokenize(source: string): TokenizeResult {
     const writeMatch = matchKeywordOrDebug(remaining, 'WRITE');
     const findMatch = matchKeywordOrDebug(remaining, 'FIND');
     const paralelMatch = matchKeywordOrDebug(remaining, 'PARALEL');
+    const iterateMatch = matchKeywordOrDebug(remaining, 'ITERATE');
+    const exitIterationMatch = matchKeywordOrDebug(remaining, 'EXIT ITERATION');
+    const continueIterationMatch = matchKeywordOrDebug(remaining, 'CONTINUE ITERATION');
+    const clearContextMatch = matchKeywordOrDebug(remaining, 'CLEAR CONTEXT');
 
-    if (continueLoopMatch.matched) {
+    if (continueIterationMatch.matched) {
+      tokens.push({
+        type: 'CONTINUE_ITERATION',
+        value: 'CONTINUE ITERATION',
+        debug: continueIterationMatch.isDebug,
+        span: {
+          line: lineNum,
+          column: relativeOffset + 1,
+          start: lineStartOffset + relativeOffset,
+          end: lineStartOffset + relativeOffset + continueIterationMatch.length
+        }
+      } as Token);
+      hasTokensOnThisLine = true;
+    }
+    else if (exitIterationMatch.matched) {
+      tokens.push({
+        type: 'EXIT_ITERATION',
+        value: 'EXIT ITERATION',
+        debug: exitIterationMatch.isDebug,
+        span: {
+          line: lineNum,
+          column: relativeOffset + 1,
+          start: lineStartOffset + relativeOffset,
+          end: lineStartOffset + relativeOffset + exitIterationMatch.length
+        }
+      } as Token);
+      hasTokensOnThisLine = true;
+    }
+    else if (clearContextMatch.matched) {
+      tokens.push({
+        type: 'CLEAR_CONTEXT',
+        value: 'CLEAR CONTEXT',
+        debug: clearContextMatch.isDebug,
+        span: {
+          line: lineNum,
+          column: relativeOffset + 1,
+          start: lineStartOffset + relativeOffset,
+          end: lineStartOffset + relativeOffset + clearContextMatch.length
+        }
+      } as Token);
+      hasTokensOnThisLine = true;
+    }
+    else if (iterateMatch.matched) {
+      tokens.push({
+        type: 'ITERATE',
+        value: 'ITERATE',
+        debug: iterateMatch.isDebug,
+        span: {
+          line: lineNum,
+          column: relativeOffset + 1,
+          start: lineStartOffset + relativeOffset,
+          end: lineStartOffset + relativeOffset + iterateMatch.length
+        }
+      } as Token);
+      hasTokensOnThisLine = true;
+      const rest = remaining.slice(iterateMatch.length);
+      const colonIdx = rest.lastIndexOf(':');
+      if (colonIdx !== -1) {
+        const argText = rest.slice(0, colonIdx);
+        if (argText.trim().length > 0) {
+          tokens.push(parseStringArg(argText, lineNum, lineStartOffset, relativeOffset + iterateMatch.length));
+        }
+        tokens.push({
+          type: 'COLON',
+          value: ':',
+          span: {
+            line: lineNum,
+            column: relativeOffset + iterateMatch.length + colonIdx + 1,
+            start: lineStartOffset + relativeOffset + iterateMatch.length + colonIdx,
+            end: lineStartOffset + relativeOffset + iterateMatch.length + colonIdx + 1
+          }
+        } as Token);
+      } else {
+        errors.push({
+          errorKey: 'expected_iterate_colon',
+          message: t('expected_iterate_colon'),
+          span: {
+            line: lineNum,
+            column: lineText.length + 1,
+            start: lineStartOffset + lineText.length,
+            end: lineStartOffset + lineText.length + 1
+          }
+        });
+      }
+    }
+    else if (continueLoopMatch.matched) {
       tokens.push({
         type: 'CONTINUE_LOOP',
         value: 'CONTINUE LOOP',

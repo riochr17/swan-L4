@@ -60,6 +60,10 @@ export type StatementNode =
   | WriteStatementNode
   | FindStatementNode
   | ParalelStatementNode
+  | IterateStatementNode
+  | ExitIterationStatementNode
+  | ContinueIterationStatementNode
+  | ClearContextStatementNode
   ;
 
 export interface ParalelStatementNode extends ASTNode {
@@ -151,6 +155,24 @@ export interface ExitStatementNode extends ASTNode {
   type: 'Exit';
 }
 
+export interface IterateStatementNode extends ASTNode {
+  type: 'Iterate';
+  argument: string | null;
+  body: StatementNode[];
+}
+
+export interface ExitIterationStatementNode extends ASTNode {
+  type: 'ExitIteration';
+}
+
+export interface ContinueIterationStatementNode extends ASTNode {
+  type: 'ContinueIteration';
+}
+
+export interface ClearContextStatementNode extends ASTNode {
+  type: 'ClearContext';
+}
+
 export interface ParseError {
   errorKey: string;
   args?: Record<string, string | number>;
@@ -209,6 +231,7 @@ export function parse(tokens: Token[]): ParseResult {
   const defines: DefineNode[] = [];
   const definedMacros = new Set<string>();
   let inLoopDepth = 0;
+  let inIterationDepth = 0;
 
   function curLine(): ParseLine | undefined {
     return lines[index];
@@ -661,6 +684,100 @@ export function parse(tokens: Token[]): ParseResult {
         }
         return {
           type: 'ExitLoop',
+          span
+        };
+      }
+
+      case 'EXIT_ITERATION': {
+        if (inIterationDepth === 0) {
+          errors.push({
+            errorKey: 'exit_iteration_outside_iteration',
+            message: t('exit_iteration_outside_iteration'),
+            span: first.span
+          });
+        }
+        if (tokens.length > 1) {
+          errors.push({
+            errorKey: 'exit_iteration_no_args',
+            message: t('exit_iteration_no_args'),
+            span: tokens[1]?.span ?? first.span
+          });
+        }
+        return {
+          type: 'ExitIteration',
+          span
+        };
+      }
+
+      case 'CONTINUE_ITERATION': {
+        if (inIterationDepth === 0) {
+          errors.push({
+            errorKey: 'continue_iteration_outside_iteration',
+            message: t('continue_iteration_outside_iteration'),
+            span: first.span
+          });
+        }
+        if (tokens.length > 1) {
+          errors.push({
+            errorKey: 'continue_iteration_no_args',
+            message: t('continue_iteration_no_args'),
+            span: tokens[1]?.span ?? first.span
+          });
+        }
+        return {
+          type: 'ContinueIteration',
+          span
+        };
+      }
+
+      case 'CLEAR_CONTEXT': {
+        if (tokens.length > 1) {
+          errors.push({
+            errorKey: 'clear_context_no_args',
+            message: t('clear_context_no_args'),
+            span: tokens[1]?.span ?? first.span
+          });
+        }
+        return {
+          type: 'ClearContext',
+          span
+        };
+      }
+
+      case 'ITERATE': {
+        const lastToken = tokens[tokens.length - 1];
+        if (!lastToken || lastToken.type !== 'COLON') {
+          errors.push({
+            errorKey: 'expected_iterate_colon',
+            message: t('expected_iterate_colon'),
+            span: lastToken?.span ?? first.span
+          });
+        }
+
+        let argument: string | null = null;
+        const argToken = tokens[1];
+        if (argToken && argToken.type === 'STRING') {
+          argument = argToken.value;
+        }
+
+        inIterationDepth++;
+        index++;
+        const body = parseBlock(level + 1);
+        index--;
+        inIterationDepth--;
+
+        if (body.length === 0) {
+          errors.push({
+            errorKey: 'empty_iterate_block',
+            message: t('empty_iterate_block'),
+            span: first.span
+          });
+        }
+
+        return {
+          type: 'Iterate',
+          argument,
+          body,
           span
         };
       }

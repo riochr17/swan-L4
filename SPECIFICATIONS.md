@@ -17,12 +17,15 @@
   - [4.7. READ](#47-read)
   - [4.8. WRITE](#48-write)
   - [4.9. FIND](#49-find)
+  - [4.10. CLEAR CONTEXT](#410-clear-context)
 - [5. Control Flow & Loops](#5-control-flow--loops)
   - [5.1. IF and ELSE](#51-if-and-else)
   - [5.2. LOOP](#52-loop)
   - [5.3. Loop Controls (EXIT LOOP / CONTINUE LOOP)](#53-loop-controls-exit-loop--continue-loop)
   - [5.4. EXIT](#54-exit)
   - [5.5. PARALEL](#55-paralel)
+  - [5.6. ITERATE](#56-iterate)
+  - [5.7. Iteration Controls (EXIT ITERATION / CONTINUE ITERATION)](#57-iteration-controls-exit-iteration--continue-iteration)
 - [6. Localized Diagnostics (i18n)](#6-localized-diagnostics-i18n)
 - [7. Code Examples](#7-code-examples)
   - [7.1. Simple Script (Linear Execution)](#71-simple-script-linear-execution)
@@ -152,6 +155,12 @@ SWAN L4 represents scopes using indentation:
     or even implicit context {Context}
     ```
     ````
+  * **Rule 4:** Optional context variables can be passed at the end as {$variable_name}.
+
+### 4.10. `CLEAR CONTEXT`
+* **Syntax:** `CLEAR CONTEXT`
+* **Behavior:** Clears the active pipeline context.
+* **Rule:** Does not accept any arguments.
 
 ## 5. Control Flow & Loops
 
@@ -200,6 +209,20 @@ SWAN L4 represents scopes using indentation:
     READ ./city-logs.txt
     CALL_SEARCH_BING ?keywords=city,data,asia
   ```
+
+### 5.6. `ITERATE`
+* **Syntax:**
+  ```l4
+  ITERATE [<argument>]:
+    <indented_statements>
+  ```
+* **Rule 1:** The `ITERATE` header must end with a colon (`:`).
+* **Rule 2:** The loop block must contain at least one statement.
+* **Rule 3:** The argument is optional and specifies the context/data to iterate over. If omitted, it defaults to the active context.
+
+### 5.7. Iteration Controls (`EXIT ITERATION` / `CONTINUE ITERATION`)
+* **Rule 1:** Must be placed inside an `ITERATE` block.
+* **Rule 2:** Cannot accept any arguments.
 
 ## 6. Localized Diagnostics (i18n)
 

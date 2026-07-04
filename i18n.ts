@@ -205,6 +205,34 @@ export const translations: Record<string, Record<Locale, string>> = {
   invalid_find_ratio: {
     en: 'Expected chunk ratio (e.g. 3/15) after FIND',
     id: 'Harusnya ada rasio chunk (contoh: 3/15) setelah FIND'
+  },
+  expected_iterate_colon: {
+    en: "Expected ':' at the end of ITERATE statement",
+    id: "Harusnya ada ':' di akhir pernyataan ITERATE"
+  },
+  empty_iterate_block: {
+    en: 'ITERATE statement must have at least one statement in its block',
+    id: 'Statement ITERATE harus memiliki setidaknya satu statement di dalam bloknya'
+  },
+  exit_iteration_outside_iteration: {
+    en: 'EXIT ITERATION must be placed inside an ITERATE block',
+    id: 'EXIT ITERATION harus ditempatkan di dalam blok ITERATE'
+  },
+  exit_iteration_no_args: {
+    en: 'EXIT ITERATION does not accept any arguments',
+    id: 'EXIT ITERATION tidak boleh diikuti kalimat apapun'
+  },
+  continue_iteration_outside_iteration: {
+    en: 'CONTINUE ITERATION must be placed inside an ITERATE block',
+    id: 'CONTINUE ITERATION harus ditempatkan di dalam blok ITERATE'
+  },
+  continue_iteration_no_args: {
+    en: 'CONTINUE ITERATION does not accept any arguments',
+    id: 'CONTINUE ITERATION tidak boleh diikuti kalimat apapun'
+  },
+  clear_context_no_args: {
+    en: 'CLEAR CONTEXT does not accept any arguments',
+    id: 'CLEAR CONTEXT tidak boleh diikuti kalimat apapun'
   }
 };
 

@@ -217,6 +217,42 @@ LOOP:
   SAY THINK Find more about this topic: {$item}
 `;
 
+const iterateSource = `\
+TITLE Iterate Program
+
+ITERATE all data from {Context} and {$var4}:
+  SAY something
+  THINK something
+
+ITERATE {Context}:
+  SAY something
+  THINK something
+  EXIT ITERATION
+
+ITERATE:
+  SAY something
+  THINK something
+  CONTINUE ITERATION
+
+SAY something
+THINK something
+CLEAR CONTEXT
+SAY now the context {Context} must be empty
+`;
+
+const invalidIterateSource = `\
+TITLE Invalid Iterate Program
+
+EXIT ITERATION
+CONTINUE ITERATION
+ITERATE
+  SAY no colon
+CLEAR CONTEXT some trailing args
+EXIT ITERATION some trailing args
+CONTINUE ITERATION some trailing args
+ITERATE:
+`;
+
 
 function testSource(name: string, src: string) {
   console.log(`=== TESTING: ${name} ===`);
@@ -263,6 +299,10 @@ function main() {
   testSource("Valid PARALEL Statements", paralelSource);
   console.log("\n");
   testSource("Invalid PARALEL Statements", invalidParalelSource);
+  console.log("\n");
+  testSource("Valid ITERATE Statements", iterateSource);
+  console.log("\n");
+  testSource("Invalid ITERATE Statements", invalidIterateSource);
 
   console.log("\n\n-- RUNNING IN INDONESIAN --");
   setLocale('id');
@@ -277,6 +317,8 @@ function main() {
   testSource("Invalid FIND Statements (Indonesian)", invalidFindSource);
   console.log("\n");
   testSource("Invalid PARALEL Statements (Indonesian)", invalidParalelSource);
+  console.log("\n");
+  testSource("Invalid ITERATE Statements (Indonesian)", invalidIterateSource);
 }
 
 main();
