@@ -16,6 +16,9 @@
  */
 
 import { t } from './i18n';
+import { extractCodePart } from './tokenizer/extract-code-part';
+import { getIndentLevel } from './tokenizer/get-indent-level';
+import { isIndentMultipleByUnit } from './tokenizer/is-indent-multipe-by-unit';
 
 export interface Span {
   line: number;
@@ -148,24 +151,6 @@ function parseStringArg(text: string, lineNum: number, lineStartOffset: number, 
   } as Token;
 }
 
-function getIndentLevel(indentStr: string, indentUnit: number): number {
-  let level = 0;
-  for (let i = 0; i < indentStr.length; i++) {
-    if (indentStr[i] === '\t') {
-      level += 1;
-    } else if (indentStr[i] === ' ') {
-      let spaceRun = 0;
-      while (i < indentStr.length && indentStr[i] === ' ') {
-        spaceRun++;
-        i++;
-      }
-      i--;
-      level += Math.floor(spaceRun / indentUnit);
-    }
-  }
-  return level;
-}
-
 export function tokenize(source: string): TokenizeResult {
   const tokens: Token[] = [];
   const errors: TokenizeError[] = [];
@@ -226,26 +211,8 @@ export function tokenize(source: string): TokenizeResult {
     const lineStartOffset = currentOffset;
     currentOffset += lineText.length + (lineIdx < lines.length - 1 ? (source[lineStartOffset + lineText.length] === '\r' ? 2 : 1) : 0);
 
-    // Find comment start, ignoring inside string literals and http/https URLs
-    let commentStart = -1;
-    let inStr = false;
-    for (let i = 0; i < lineText.length; i++) {
-      if (lineText[i] === '"') {
-        inStr = !inStr;
-      } else if (!inStr && lineText[i] === '/' && lineText[i + 1] === '/') {
-        const before = lineText.slice(0, i);
-        if (/(http|https):$/i.test(before)) {
-          continue;
-        }
-        commentStart = i;
-        break;
-      }
-    }
-
-    const codePart = commentStart !== -1 ? lineText.slice(0, commentStart) : lineText;
-
-    // Skip completely empty or comment-only lines for indentation and processing
-    if (/^\s*$/.test(codePart)) {
+    const codePart = extractCodePart(lineText);
+    if (codePart == '') {
       continue;
     }
 
@@ -353,23 +320,7 @@ export function tokenize(source: string): TokenizeResult {
     const indentStr = indentMatch ? indentMatch[0] : '';
 
     // Validate indentation is multiple of indentUnit
-    let isMultiple = true;
-    let spaceRun = 0;
-    for (let i = 0; i < indentStr.length; i++) {
-      if (indentStr[i] === ' ') {
-        let run = 0;
-        while (i < indentStr.length && indentStr[i] === ' ') {
-          run++;
-          i++;
-        }
-        i--;
-        if (run % indentUnit !== 0) {
-          isMultiple = false;
-          spaceRun = run;
-        }
-      }
-    }
-
+    const { isMultiple, spaceRun } = isIndentMultipleByUnit(indentStr, indentUnit);
     if (!isMultiple) {
       errors.push({
         errorKey: 'indentation_not_multiple',
@@ -386,6 +337,7 @@ export function tokenize(source: string): TokenizeResult {
 
     const level = getIndentLevel(indentStr, indentUnit);
 
+    // [TOKENS] push indent tokens
     for (let i = 0; i < level; i++) {
       // Find the character range for this level step in the indentStr (ignoring the remainder in start offset calculation)
       const maxBaseLength = level * indentUnit;
@@ -420,6 +372,7 @@ export function tokenize(source: string): TokenizeResult {
 
     let hasTokensOnThisLine = false;
 
+    // [TOKENS] push variable if statement starts with explicit context
     // Check if the statement starts with a variable assignment: $[a-zA-Z0-9_]+
     const varMatch = remaining.match(/^\$[a-zA-Z0-9_]+/);
     if (varMatch) {
@@ -445,7 +398,6 @@ export function tokenize(source: string): TokenizeResult {
       relativeOffset += postVarLen;
     }
 
-    // 1. CONTINUE LOOP
     const continueLoopMatch = matchKeywordOrDebug(remaining, 'CONTINUE LOOP');
     const exitLoopMatch = matchKeywordOrDebug(remaining, 'EXIT LOOP');
     const titleMatch = matchKeywordOrDebug(remaining, 'TITLE');
@@ -468,6 +420,7 @@ export function tokenize(source: string): TokenizeResult {
     const continueIterationMatch = matchKeywordOrDebug(remaining, 'CONTINUE ITERATION');
     const clearContextMatch = matchKeywordOrDebug(remaining, 'CLEAR CONTEXT');
 
+    // [TOKENS] push native keywords with no arguments
     if (continueIterationMatch.matched) {
       tokens.push({
         type: 'CONTINUE_ITERATION',
@@ -510,6 +463,146 @@ export function tokenize(source: string): TokenizeResult {
       } as Token);
       hasTokensOnThisLine = true;
     }
+    else if (continueLoopMatch.matched) {
+      tokens.push({
+        type: 'CONTINUE_LOOP',
+        value: 'CONTINUE LOOP',
+        debug: continueLoopMatch.isDebug,
+        span: {
+          line: lineNum,
+          column: relativeOffset + 1,
+          start: lineStartOffset + relativeOffset,
+          end: lineStartOffset + relativeOffset + continueLoopMatch.length
+        }
+      } as Token);
+      hasTokensOnThisLine = true;
+    }
+    else if (exitLoopMatch.matched) {
+      tokens.push({
+        type: 'EXIT_LOOP',
+        value: 'EXIT LOOP',
+        debug: exitLoopMatch.isDebug,
+        span: {
+          line: lineNum,
+          column: relativeOffset + 1,
+          start: lineStartOffset + relativeOffset,
+          end: lineStartOffset + relativeOffset + exitLoopMatch.length
+        }
+      } as Token);
+      hasTokensOnThisLine = true;
+    }
+    else if (exitMatch.matched) {
+      tokens.push({
+        type: 'EXIT',
+        value: 'EXIT',
+        debug: exitMatch.isDebug,
+        span: {
+          line: lineNum,
+          column: relativeOffset + 1,
+          start: lineStartOffset + relativeOffset,
+          end: lineStartOffset + relativeOffset + exitMatch.length
+        }
+      } as Token);
+      hasTokensOnThisLine = true;
+    }
+    else if (listenMatch.matched) {
+      tokens.push({
+        type: 'LISTEN',
+        value: 'LISTEN',
+        debug: listenMatch.isDebug,
+        span: {
+          line: lineNum,
+          column: relativeOffset + 1,
+          start: lineStartOffset + relativeOffset,
+          end: lineStartOffset + relativeOffset + listenMatch.length
+        }
+      } as Token);
+      hasTokensOnThisLine = true;
+    }
+
+    // [TOKENS] push native keywords with simple arguments
+    else if (titleMatch.matched) {
+      tokens.push({
+        type: 'TITLE',
+        value: 'TITLE',
+        debug: titleMatch.isDebug,
+        span: {
+          line: lineNum,
+          column: relativeOffset + 1,
+          start: lineStartOffset + relativeOffset,
+          end: lineStartOffset + relativeOffset + titleMatch.length
+        }
+      } as Token);
+      hasTokensOnThisLine = true;
+      const argText = remaining.slice(titleMatch.length);
+      parseAndPushStringArg(argText, relativeOffset + titleMatch.length);
+    }
+    else if (sayThinkMatch.matched) {
+      tokens.push({
+        type: 'SAY_THINK',
+        value: 'SAY THINK',
+        debug: sayThinkMatch.isDebug,
+        span: {
+          line: lineNum,
+          column: relativeOffset + 1,
+          start: lineStartOffset + relativeOffset,
+          end: lineStartOffset + relativeOffset + sayThinkMatch.length
+        }
+      } as Token);
+      hasTokensOnThisLine = true;
+      const argText = remaining.slice(sayThinkMatch.length);
+      parseAndPushStringArg(argText, relativeOffset + sayThinkMatch.length);
+    }
+    else if (sayMatch.matched) {
+      tokens.push({
+        type: 'SAY',
+        value: 'SAY',
+        debug: sayMatch.isDebug,
+        span: {
+          line: lineNum,
+          column: relativeOffset + 1,
+          start: lineStartOffset + relativeOffset,
+          end: lineStartOffset + relativeOffset + sayMatch.length
+        }
+      } as Token);
+      hasTokensOnThisLine = true;
+      const argText = remaining.slice(sayMatch.length);
+      parseAndPushStringArg(argText, relativeOffset + sayMatch.length);
+    }
+    else if (thinkMatch.matched) {
+      tokens.push({
+        type: 'THINK',
+        value: 'THINK',
+        debug: thinkMatch.isDebug,
+        span: {
+          line: lineNum,
+          column: relativeOffset + 1,
+          start: lineStartOffset + relativeOffset,
+          end: lineStartOffset + relativeOffset + thinkMatch.length
+        }
+      } as Token);
+      hasTokensOnThisLine = true;
+      const argText = remaining.slice(thinkMatch.length);
+      parseAndPushStringArg(argText, relativeOffset + thinkMatch.length);
+    }
+    else if (readMatch.matched) {
+      tokens.push({
+        type: 'READ',
+        value: 'READ',
+        debug: readMatch.isDebug,
+        span: {
+          line: lineNum,
+          column: relativeOffset + 1,
+          start: lineStartOffset + relativeOffset,
+          end: lineStartOffset + relativeOffset + readMatch.length
+        }
+      } as Token);
+      hasTokensOnThisLine = true;
+      const argText = remaining.slice(readMatch.length);
+      parseAndPushStringArg(argText, relativeOffset + readMatch.length);
+    }
+
+    // [TOKENS] push native keywords with complex arguments
     else if (iterateMatch.matched) {
       tokens.push({
         type: 'ITERATE',
@@ -553,68 +646,6 @@ export function tokenize(source: string): TokenizeResult {
         });
       }
     }
-    else if (continueLoopMatch.matched) {
-      tokens.push({
-        type: 'CONTINUE_LOOP',
-        value: 'CONTINUE LOOP',
-        debug: continueLoopMatch.isDebug,
-        span: {
-          line: lineNum,
-          column: relativeOffset + 1,
-          start: lineStartOffset + relativeOffset,
-          end: lineStartOffset + relativeOffset + continueLoopMatch.length
-        }
-      } as Token);
-      hasTokensOnThisLine = true;
-    }
-    // 2. EXIT LOOP
-    else if (exitLoopMatch.matched) {
-      tokens.push({
-        type: 'EXIT_LOOP',
-        value: 'EXIT LOOP',
-        debug: exitLoopMatch.isDebug,
-        span: {
-          line: lineNum,
-          column: relativeOffset + 1,
-          start: lineStartOffset + relativeOffset,
-          end: lineStartOffset + relativeOffset + exitLoopMatch.length
-        }
-      } as Token);
-      hasTokensOnThisLine = true;
-    }
-    // 2.2. TITLE
-    else if (titleMatch.matched) {
-      tokens.push({
-        type: 'TITLE',
-        value: 'TITLE',
-        debug: titleMatch.isDebug,
-        span: {
-          line: lineNum,
-          column: relativeOffset + 1,
-          start: lineStartOffset + relativeOffset,
-          end: lineStartOffset + relativeOffset + titleMatch.length
-        }
-      } as Token);
-      hasTokensOnThisLine = true;
-      const argText = remaining.slice(titleMatch.length);
-      parseAndPushStringArg(argText, relativeOffset + titleMatch.length);
-    }
-    // 2.5. EXIT
-    else if (exitMatch.matched) {
-      tokens.push({
-        type: 'EXIT',
-        value: 'EXIT',
-        debug: exitMatch.isDebug,
-        span: {
-          line: lineNum,
-          column: relativeOffset + 1,
-          start: lineStartOffset + relativeOffset,
-          end: lineStartOffset + relativeOffset + exitMatch.length
-        }
-      } as Token);
-      hasTokensOnThisLine = true;
-    }
-    // 2.75. ASK
     else if (askMatch.matched) {
       tokens.push({
         type: 'ASK',
@@ -659,73 +690,6 @@ export function tokenize(source: string): TokenizeResult {
         parseAndPushStringArg(rest, restOffset);
       }
     }
-    // 3. SAY THINK
-    else if (sayThinkMatch.matched) {
-      tokens.push({
-        type: 'SAY_THINK',
-        value: 'SAY THINK',
-        debug: sayThinkMatch.isDebug,
-        span: {
-          line: lineNum,
-          column: relativeOffset + 1,
-          start: lineStartOffset + relativeOffset,
-          end: lineStartOffset + relativeOffset + sayThinkMatch.length
-        }
-      } as Token);
-      hasTokensOnThisLine = true;
-      const argText = remaining.slice(sayThinkMatch.length);
-      parseAndPushStringArg(argText, relativeOffset + sayThinkMatch.length);
-    }
-    // 4. SAY
-    else if (sayMatch.matched) {
-      tokens.push({
-        type: 'SAY',
-        value: 'SAY',
-        debug: sayMatch.isDebug,
-        span: {
-          line: lineNum,
-          column: relativeOffset + 1,
-          start: lineStartOffset + relativeOffset,
-          end: lineStartOffset + relativeOffset + sayMatch.length
-        }
-      } as Token);
-      hasTokensOnThisLine = true;
-      const argText = remaining.slice(sayMatch.length);
-      parseAndPushStringArg(argText, relativeOffset + sayMatch.length);
-    }
-    // 5. LISTEN
-    else if (listenMatch.matched) {
-      tokens.push({
-        type: 'LISTEN',
-        value: 'LISTEN',
-        debug: listenMatch.isDebug,
-        span: {
-          line: lineNum,
-          column: relativeOffset + 1,
-          start: lineStartOffset + relativeOffset,
-          end: lineStartOffset + relativeOffset + listenMatch.length
-        }
-      } as Token);
-      hasTokensOnThisLine = true;
-    }
-    // 6. THINK
-    else if (thinkMatch.matched) {
-      tokens.push({
-        type: 'THINK',
-        value: 'THINK',
-        debug: thinkMatch.isDebug,
-        span: {
-          line: lineNum,
-          column: relativeOffset + 1,
-          start: lineStartOffset + relativeOffset,
-          end: lineStartOffset + relativeOffset + thinkMatch.length
-        }
-      } as Token);
-      hasTokensOnThisLine = true;
-      const argText = remaining.slice(thinkMatch.length);
-      parseAndPushStringArg(argText, relativeOffset + thinkMatch.length);
-    }
-    // 7. IF
     else if (ifMatch.matched) {
       tokens.push({
         type: 'IF',
@@ -769,7 +733,6 @@ export function tokenize(source: string): TokenizeResult {
         });
       }
     }
-    // 8. ELSE
     else if (elseMatch.matched) {
       const elseLen = elseMatch.length;
       tokens.push({
@@ -799,7 +762,6 @@ export function tokenize(source: string): TokenizeResult {
         } as Token);
       }
     }
-    // 9. LOOP
     else if (loopMatch.matched) {
       const loopLen = loopMatch.length;
       tokens.push({
@@ -829,7 +791,6 @@ export function tokenize(source: string): TokenizeResult {
         } as Token);
       }
     }
-    // 10. DEFINE
     else if (defineMatch.matched) {
       tokens.push({
         type: 'DEFINE',
@@ -897,7 +858,6 @@ export function tokenize(source: string): TokenizeResult {
         } as Token);
       }
     }
-    // 11. CALL_ macro call
     else if (remaining.startsWith('CALL_') || remaining.startsWith('[CALL_')) {
       let isDebug = false;
       let matchStr = remaining;
@@ -932,24 +892,6 @@ export function tokenize(source: string): TokenizeResult {
         parseAndPushStringArg(argText, relativeOffset + tokenLen);
       }
     }
-    // 12. READ
-    else if (readMatch.matched) {
-      tokens.push({
-        type: 'READ',
-        value: 'READ',
-        debug: readMatch.isDebug,
-        span: {
-          line: lineNum,
-          column: relativeOffset + 1,
-          start: lineStartOffset + relativeOffset,
-          end: lineStartOffset + relativeOffset + readMatch.length
-        }
-      } as Token);
-      hasTokensOnThisLine = true;
-      const argText = remaining.slice(readMatch.length);
-      parseAndPushStringArg(argText, relativeOffset + readMatch.length);
-    }
-    // 13. WRITE
     else if (writeMatch.matched) {
       tokens.push({
         type: 'WRITE',
@@ -1018,7 +960,6 @@ export function tokenize(source: string): TokenizeResult {
         parseAndPushStringArg(rest, restOffset);
       }
     }
-    // 14. FIND
     else if (findMatch.matched) {
       tokens.push({
         type: 'FIND',
@@ -1157,7 +1098,6 @@ export function tokenize(source: string): TokenizeResult {
         });
       }
     }
-    // 15. PARALEL
     else if (paralelMatch.matched) {
       const paralelLen = paralelMatch.length;
       tokens.push({
