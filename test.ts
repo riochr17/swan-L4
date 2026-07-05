@@ -253,6 +253,23 @@ CONTINUE ITERATION some trailing args
 ITERATE:
 `;
 
+const contextSource = `\
+TITLE Context Statement Test
+
+CONTEXT:
+  SAY this feature is great
+  SAY it will remember this context too
+  SAY yes this one too
+SAY {Context}
+`;
+
+const invalidContextSource = `\
+TITLE Invalid Context Block
+CONTEXT
+  SAY no colon
+CONTEXT:
+`;
+
 
 function testSource(name: string, src: string) {
   console.log(`=== TESTING: ${name} ===`);
@@ -303,6 +320,10 @@ function main() {
   testSource("Valid ITERATE Statements", iterateSource);
   console.log("\n");
   testSource("Invalid ITERATE Statements", invalidIterateSource);
+  console.log("\n");
+  testSource("Valid CONTEXT Statements", contextSource);
+  console.log("\n");
+  testSource("Invalid CONTEXT Statements", invalidContextSource);
 
   console.log("\n\n-- RUNNING IN INDONESIAN --");
   setLocale('id');
@@ -319,6 +340,8 @@ function main() {
   testSource("Invalid PARALEL Statements (Indonesian)", invalidParalelSource);
   console.log("\n");
   testSource("Invalid ITERATE Statements (Indonesian)", invalidIterateSource);
+  console.log("\n");
+  testSource("Invalid CONTEXT Statements (Indonesian)", invalidContextSource);
 }
 
 main();

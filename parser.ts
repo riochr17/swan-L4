@@ -64,7 +64,13 @@ export type StatementNode =
   | ExitIterationStatementNode
   | ContinueIterationStatementNode
   | ClearContextStatementNode
+  | ContextStatementNode
   ;
+
+export interface ContextStatementNode extends ASTNode {
+  type: 'Context';
+  body: StatementNode[];
+}
 
 export interface ParalelStatementNode extends ASTNode {
   type: 'Paralel';
@@ -963,6 +969,35 @@ export function parse(tokens: Token[]): ParseResult {
 
         return {
           type: 'Paralel',
+          body,
+          span
+        };
+      }
+
+      case 'CONTEXT': {
+        const lastToken = tokens[tokens.length - 1];
+        if (!lastToken || lastToken.type !== 'COLON') {
+          errors.push({
+            errorKey: 'expected_context_colon',
+            message: t('expected_context_colon'),
+            span: lastToken?.span ?? first.span
+          });
+        }
+
+        index++;
+        const body = parseBlock(level + 1);
+        index--;
+
+        if (body.length === 0) {
+          errors.push({
+            errorKey: 'empty_context_block',
+            message: t('empty_context_block'),
+            span: first.span
+          });
+        }
+
+        return {
+          type: 'Context',
           body,
           span
         };

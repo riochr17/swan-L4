@@ -18,6 +18,7 @@
   - [4.8. WRITE](#48-write)
   - [4.9. FIND](#49-find)
   - [4.10. CLEAR CONTEXT](#410-clear-context)
+  - [4.11. CONTEXT](#411-context)
 - [5. Control Flow & Loops](#5-control-flow--loops)
   - [5.1. IF and ELSE](#51-if-and-else)
   - [5.2. LOOP](#52-loop)
@@ -161,6 +162,16 @@ SWAN L4 represents scopes using indentation:
 * **Syntax:** `CLEAR CONTEXT`
 * **Behavior:** Clears the active pipeline context.
 * **Rule:** Does not accept any arguments.
+
+### 4.11. `CONTEXT`
+* **Syntax:**
+  ```l4
+  CONTEXT:
+    <indented_statements>
+  ```
+* **Behavior:** Executes a block of statements and aggregates/combines their outputs (implicit contexts) into the next statement's context.
+* **Rule 1:** The `CONTEXT` statement header must end with a colon (`:`).
+* **Rule 2:** The block must contain at least one statement.
 
 ## 5. Control Flow & Loops
 

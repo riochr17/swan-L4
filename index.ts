@@ -46,6 +46,7 @@ export type {
   ExitIterationStatementNode,
   ContinueIterationStatementNode,
   ClearContextStatementNode,
+  ContextStatementNode,
   ParseError,
   ParseResult
 } from './parser';

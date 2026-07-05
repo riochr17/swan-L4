@@ -57,6 +57,7 @@ export type TokenType =
   | 'EXIT_ITERATION'
   | 'CONTINUE_ITERATION'
   | 'CLEAR_CONTEXT'
+  | 'CONTEXT'
   ;
 
 export interface TokenMap {
@@ -89,6 +90,7 @@ export interface TokenMap {
   EXIT_ITERATION: { type: 'EXIT_ITERATION'; value: 'EXIT ITERATION' };
   CONTINUE_ITERATION: { type: 'CONTINUE_ITERATION'; value: 'CONTINUE ITERATION' };
   CLEAR_CONTEXT: { type: 'CLEAR_CONTEXT'; value: 'CLEAR CONTEXT' };
+  CONTEXT: { type: 'CONTEXT'; value: 'CONTEXT' };
 }
 
 export type Token = {
@@ -419,6 +421,7 @@ export function tokenize(source: string): TokenizeResult {
     const exitIterationMatch = matchKeywordOrDebug(remaining, 'EXIT ITERATION');
     const continueIterationMatch = matchKeywordOrDebug(remaining, 'CONTINUE ITERATION');
     const clearContextMatch = matchKeywordOrDebug(remaining, 'CLEAR CONTEXT');
+    const contextMatch = matchKeywordOrDebug(remaining, 'CONTEXT');
 
     // [TOKENS] push native keywords with no arguments
     if (continueIterationMatch.matched) {
@@ -1123,6 +1126,35 @@ export function tokenize(source: string): TokenizeResult {
             column: relativeOffset + paralelLen + colonIdx + 1,
             start: lineStartOffset + relativeOffset + paralelLen + colonIdx,
             end: lineStartOffset + relativeOffset + paralelLen + colonIdx + 1
+          }
+        } as Token);
+      }
+    }
+    else if (contextMatch.matched) {
+      const contextLen = contextMatch.length;
+      tokens.push({
+        type: 'CONTEXT',
+        value: 'CONTEXT',
+        debug: contextMatch.isDebug,
+        span: {
+          line: lineNum,
+          column: relativeOffset + 1,
+          start: lineStartOffset + relativeOffset,
+          end: lineStartOffset + relativeOffset + contextLen
+        }
+      } as Token);
+      hasTokensOnThisLine = true;
+      const rest = remaining.slice(contextLen);
+      const colonIdx = rest.indexOf(':');
+      if (colonIdx !== -1) {
+        tokens.push({
+          type: 'COLON',
+          value: ':',
+          span: {
+            line: lineNum,
+            column: relativeOffset + contextLen + colonIdx + 1,
+            start: lineStartOffset + relativeOffset + contextLen + colonIdx,
+            end: lineStartOffset + relativeOffset + contextLen + colonIdx + 1
           }
         } as Token);
       }

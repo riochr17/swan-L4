@@ -233,6 +233,14 @@ export const translations: Record<string, Record<Locale, string>> = {
   clear_context_no_args: {
     en: 'CLEAR CONTEXT does not accept any arguments',
     id: 'CLEAR CONTEXT tidak boleh diikuti kalimat apapun'
+  },
+  expected_context_colon: {
+    en: "Expected ':' at the end of CONTEXT statement",
+    id: "Harusnya ada ':' di akhir pernyataan CONTEXT"
+  },
+  empty_context_block: {
+    en: "CONTEXT statement must have at least one statement in its block",
+    id: "Statement CONTEXT harus memiliki setidaknya satu statement di dalam bloknya"
   }
 };
 
